@@ -77,6 +77,36 @@
         .card-poster {
             cursor: pointer;
         }
+
+        /* Оптимизация загрузки изображений */
+        .poster-img {
+            transition: opacity 0.3s ease;
+        }
+        .poster-img.loading {
+            opacity: 0.5;
+        }
+        .poster-img.loaded {
+            opacity: 1;
+        }
+
+        /* Прогрессивная загрузка - размытый фон */
+        .poster-container {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            position: relative;
+        }
+        .poster-container::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(45deg, #1a1a2e 25%, #16213e 25%, #16213e 50%, #1a1a2e 50%, #1a1a2e 75%, #16213e 75%, #16213e 100%);
+            background-size: 20px 20px;
+            opacity: 0.3;
+            animation: shimmer 1.5s infinite;
+        }
+        @keyframes shimmer {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(20px); }
+        }
     </style>
 </head>
 <body class="h-screen flex flex-col">
@@ -139,7 +169,9 @@
             <div class="w-12 h-1.5 bg-gray-700 rounded-full mx-auto mb-6 opacity-50"></div>
             
             <div class="flex gap-5 mb-6">
-                <img id="modalPoster" class="w-28 h-40 rounded-xl bg-gray-800 flex-shrink-0 object-cover shadow-2xl border border-white/10" src="" alt="Poster" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
+                <div class="poster-container w-28 h-40 rounded-xl bg-gray-800 flex-shrink-0 overflow-hidden shadow-2xl border border-white/10">
+                    <img id="modalPoster" class="w-full h-full object-cover poster-img" src="" alt="Poster" onload="this.classList.add('loaded'); this.classList.remove('loading');" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'; this.classList.add('loaded');">
+                </div>
                 <div class="flex-1 flex flex-col justify-center">
                     <h2 id="modalTitle" class="text-xl font-bold text-white leading-tight mb-1"></h2>
                     <p id="modalStudio" class="text-sm text-gray-400 mb-4 line-clamp-2"></p>
@@ -186,6 +218,10 @@
         // ============================================
         const TVMAZE_BASE_URL = 'https://api.tvmaze.com';
         const OMDB_BASE_URL = 'https://www.omdbapi.com';
+
+        // Кэш изображений в localStorage
+        const IMAGE_CACHE_KEY = 'tma_image_cache';
+        const IMAGE_CACHE_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 дней
 
         // Транслитерация
         const TRANSLITERATION = {
@@ -305,37 +341,7 @@
             'улицы разбитых фонарей': 'Streets of Broken Lights',
             'менты': 'Cops',
             'тайны следствия': 'Investigation Secrets',
-            'детективы': 'Detectives',
-            'следователь давидц': 'Investigator Davids',
-            'агент национальной безопасности': 'National Security Agent',
-            'особенности национальной': 'Peculiarities of National',
-            'даун хаус': 'Down House',
-            'день радио': 'Radio Day',
-            'день выборов': 'Election Day',
-            'что творят мужчины': 'What Men Do',
-            'горько': 'Bitter',
-            'самый лучший день': 'The Best Day',
-            'ёлки': 'Fir Trees',
-            'лесник': 'Forester',
-            'гражданин начальник': 'Citizen Chief',
-            'каменская': 'Kamenskaya',
-            'марш турецкого': 'Turkish March',
-            'бриганда': 'Brigada',
-            'бумер': 'Bumer',
-            'бой с тенью': 'Shadow Fight',
-            'ночной дозор': 'Night Watch',
-            'дневной дозор': 'Day Watch',
-            'сталинград': 'Stalingrad',
-            'экипаж': 'Crew',
-            'антикиллер': 'Antikiller',
-            'жмурки': 'Jmurki',
-            'свои': 'Own',
-            '9 рота': '9th Company',
-            'остров': 'Island',
-            'монгол': 'Mongol',
-            'царь': 'Tsar',
-            'поп': 'Priest',
-            ' Determination': 'Determination'
+            'детективы': 'Detectives'
         };
 
         // --- Состояние приложения ---
@@ -347,6 +353,9 @@
 
         // --- Инициализация ---
         document.addEventListener('DOMContentLoaded', () => {
+            // Очистка старого кэша изображений
+            cleanImageCache();
+
             if (window.Telegram && window.Telegram.WebApp) {
                 window.Telegram.WebApp.ready();
                 window.Telegram.WebApp.expand();
@@ -369,6 +378,88 @@
             renderShowList();
             setupSearch();
         });
+
+        // ============================================
+        // 🚀 ОПТИМИЗАЦИЯ ИЗОБРАЖЕНИЙ
+        // ============================================
+        
+        // Получить изображение из кэша
+        function getCachedImage(url) {
+            try {
+                const cache = JSON.parse(localStorage.getItem(IMAGE_CACHE_KEY) || '{}');
+                const cached = cache[url];
+                if (cached && Date.now() - cached.timestamp < IMAGE_CACHE_EXPIRY) {
+                    return cached.url;
+                }
+            } catch (e) {
+                console.warn('Cache read error:', e);
+            }
+            return null;
+        }
+
+        // Сохранить изображение в кэш
+        function cacheImage(originalUrl, optimizedUrl) {
+            try {
+                const cache = JSON.parse(localStorage.getItem(IMAGE_CACHE_KEY) || '{}');
+                cache[originalUrl] = {
+                    url: optimizedUrl,
+                    timestamp: Date.now()
+                };
+                // Ограничиваем размер кэша (100 записей)
+                const keys = Object.keys(cache);
+                if (keys.length > 100) {
+                    keys.slice(0, keys.length - 100).forEach(key => delete cache[key]);
+                }
+                localStorage.setItem(IMAGE_CACHE_KEY, JSON.stringify(cache));
+            } catch (e) {
+                console.warn('Cache write error:', e);
+            }
+        }
+
+        // Очистить старый кэш
+        function cleanImageCache() {
+            try {
+                const cache = JSON.parse(localStorage.getItem(IMAGE_CACHE_KEY) || '{}');
+                const now = Date.now();
+                Object.keys(cache).forEach(key => {
+                    if (now - cache[key].timestamp > IMAGE_CACHE_EXPIRY) {
+                        delete cache[key];
+                    }
+                });
+                localStorage.setItem(IMAGE_CACHE_KEY, JSON.stringify(cache));
+            } catch (e) {
+                console.warn('Cache clean error:', e);
+            }
+        }
+
+        // Оптимизировать URL изображения (использовать меньший размер)
+        function optimizeImageUrl(url) {
+            if (!url || url.includes('placeholder')) return url;
+            
+            // Проверка кэша
+            const cached = getCachedImage(url);
+            if (cached) return cached;
+
+            let optimized = url;
+            
+            // TVMaze - использовать medium вместо original
+            if (url.includes('tvmaze.com')) {
+                optimized = url.replace('/original/', '/medium/');
+            }
+            // OMDb - использовать меньший размер
+            else if (url.includes('imdb.com') || url.includes('omdbapi.com')) {
+                optimized = url.replace('_V1_.jpg', '_V1_SX300.jpg');
+            }
+            // Общие оптимизации
+            optimized = optimized.replace('.png', '.jpg');
+            
+            // Сохранить в кэш
+            if (optimized !== url) {
+                cacheImage(url, optimized);
+            }
+            
+            return optimized;
+        }
 
         function loadUserData() {
             const storageKey = `tma_shows_${state.userId}`;
@@ -498,9 +589,8 @@
                 allResults.slice(0, 20).forEach(show => {
                     const exists = state.shows.find(s => s.id === show.id);
                     
-                    const posterUrl = show.posterUrl && show.posterUrl !== 'N/A' 
-                        ? show.posterUrl 
-                        : 'https://via.placeholder.com/300x450?text=No+Image';
+                    // Оптимизация постера
+                    const posterUrl = optimizeImageUrl(show.posterUrl);
                     const year = show.year ? `(${show.year})` : '';
 
                     const btnText = exists ? 'В списке' : 'Добавить';
@@ -510,7 +600,9 @@
                     const item = document.createElement('div');
                     item.className = 'flex items-center gap-3 p-3 border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer last:border-0';
                     item.innerHTML = `
-                        <img src="${posterUrl}" class="w-12 h-16 rounded bg-gray-800 object-cover shadow-md flex-shrink-0" onerror="this.src='https://via.placeholder.com/150x220?text=Error'">
+                        <div class="poster-container w-12 h-16 rounded bg-gray-800 flex-shrink-0 overflow-hidden">
+                            <img src="${posterUrl}" class="w-full h-full object-cover poster-img" loading="lazy" onload="this.classList.add('loaded'); this.classList.remove('loading');" onerror="this.src='https://via.placeholder.com/150x220?text=Error'; this.classList.add('loaded');">
+                        </div>
                         <div class="flex-1 min-w-0">
                             <div class="font-bold text-sm truncate text-white leading-tight mb-1">${show.title}</div>
                             <div class="text-xs text-gray-400 truncate flex items-center gap-2">
@@ -552,9 +644,10 @@
             return data
                 .filter(item => item.show && item.show.name)
                 .map(item => {
+                    // ПРИОРИТЕТ: medium (210x295) вместо original для скорости
                     let posterUrl = 'https://via.placeholder.com/300x450?text=No+Image';
                     if (item.show.image && item.show.image.medium) {
-                        posterUrl = item.show.image.medium;
+                        posterUrl = item.show.image.medium; // БЫСТРЕЕ!
                     } else if (item.show.image && item.show.image.original) {
                         posterUrl = item.show.image.original;
                     }
@@ -598,7 +691,7 @@
                 state.shows.push({
                     id: id,
                     title: title,
-                    posterUrl: posterUrl,
+                    posterUrl: optimizeImageUrl(posterUrl), // Оптимизация при сохранении
                     rating: null,
                     impressions: ''
                 });
@@ -648,9 +741,8 @@
                     ? `<span class="text-yellow-400 font-bold text-sm">${show.rating}</span>` 
                     : '<span class="text-gray-600 font-bold text-sm">--</span>';
 
-                const safePosterUrl = show.posterUrl && show.posterUrl !== 'N/A' 
-                    ? show.posterUrl 
-                    : 'https://via.placeholder.com/300x450?text=No+Image';
+                // Оптимизация постера
+                const safePosterUrl = optimizeImageUrl(show.posterUrl);
 
                 card.innerHTML = `
                     <!-- Кнопка удаления -->
@@ -660,9 +752,9 @@
                         </svg>
                     </button>
 
-                    <!-- Постер с открытием модалки -->
-                    <div class="h-52 bg-gray-800 relative overflow-hidden card-poster" onclick="openModal('${show.id}')">
-                        <img src="${safePosterUrl}" class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" alt="${show.title}" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
+                    <!-- Постер с оптимизацией -->
+                    <div class="poster-container h-52 bg-gray-800 relative overflow-hidden card-poster" onclick="openModal('${show.id}')">
+                        <img src="${safePosterUrl}" class="w-full h-full object-cover poster-img" loading="lazy" onload="this.classList.add('loaded'); this.classList.remove('loading');" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'; this.classList.add('loaded');">
                         <div class="absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent"></div>
                         
                         <div class="absolute bottom-3 right-3 bg-black/70 backdrop-blur-md px-2 py-1 rounded-md border border-white/10 shadow-lg">
@@ -692,9 +784,9 @@
             state.currentModalShowId = id;
 
             const posterImg = document.getElementById('modalPoster');
-            posterImg.src = show.posterUrl && show.posterUrl !== 'N/A' 
-                ? show.posterUrl 
-                : 'https://via.placeholder.com/300x450?text=No+Image';
+            posterImg.classList.remove('loaded');
+            posterImg.classList.add('loading');
+            posterImg.src = optimizeImageUrl(show.posterUrl);
             
             document.getElementById('modalTitle').innerText = show.title;
             document.getElementById('modalStudio').innerText = 'Сериал';
