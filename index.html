@@ -77,6 +77,17 @@
         .card-poster {
             cursor: pointer;
         }
+
+        /* Фоллбэк для постеров */
+        .poster-placeholder {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .poster-placeholder svg {
+            opacity: 0.3;
+        }
     </style>
 </head>
 <body class="h-screen flex flex-col">
@@ -139,7 +150,9 @@
             <div class="w-12 h-1.5 bg-gray-700 rounded-full mx-auto mb-6 opacity-50"></div>
             
             <div class="flex gap-5 mb-6">
-                <img id="modalPoster" class="w-28 h-40 rounded-xl bg-gray-800 flex-shrink-0 object-cover shadow-2xl border border-white/10" src="" alt="Poster" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
+                <div id="modalPosterContainer" class="w-28 h-40 rounded-xl bg-gray-800 flex-shrink-0 overflow-hidden shadow-2xl border border-white/10 poster-placeholder">
+                    <img id="modalPoster" class="w-full h-full object-cover" src="" alt="Poster" onerror="showPosterPlaceholder(this)">
+                </div>
                 <div class="flex-1 flex flex-col justify-center">
                     <h2 id="modalTitle" class="text-xl font-bold text-white leading-tight mb-1"></h2>
                     <p id="modalStudio" class="text-sm text-gray-400 mb-4 line-clamp-2"></p>
@@ -185,7 +198,9 @@
         // 📺 БЕСПЛАТНЫЕ API (без ключей)
         // ============================================
         const TVMAZE_BASE_URL = 'https://api.tvmaze.com';
-        const OMDB_BASE_URL = 'https://www.omdbapi.com';
+        
+        // Фоллбэк изображения для постеров
+        const FALLBACK_POSTER = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQ1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMWExYTJlIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIyNCIgZmlsbD0iIzY2NiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIEltYWdlPC90ZXh0Pjwvc3ZnPg==';
 
         // Транслитерация
         const TRANSLITERATION = {
@@ -302,40 +317,7 @@
             'бедная настя': 'Poor Nastya',
             'каменская': 'Kamenskaya',
             'бандитский петербург': 'Bandit Petersburg',
-            'улицы разбитых фонарей': 'Streets of Broken Lights',
-            'менты': 'Cops',
-            'тайны следствия': 'Investigation Secrets',
-            'детективы': 'Detectives',
-            'следователь давидц': 'Investigator Davids',
-            'агент национальной безопасности': 'National Security Agent',
-            'особенности национальной': 'Peculiarities of National',
-            'даун хаус': 'Down House',
-            'день радио': 'Radio Day',
-            'день выборов': 'Election Day',
-            'что творят мужчины': 'What Men Do',
-            'горько': 'Bitter',
-            'самый лучший день': 'The Best Day',
-            'ёлки': 'Fir Trees',
-            'лесник': 'Forester',
-            'гражданин начальник': 'Citizen Chief',
-            'каменская': 'Kamenskaya',
-            'марш турецкого': 'Turkish March',
-            'бриганда': 'Brigada',
-            'бумер': 'Bumer',
-            'бой с тенью': 'Shadow Fight',
-            'ночной дозор': 'Night Watch',
-            'дневной дозор': 'Day Watch',
-            'сталинград': 'Stalingrad',
-            'экипаж': 'Crew',
-            'антикиллер': 'Antikiller',
-            'жмурки': 'Jmurki',
-            'свои': 'Own',
-            '9 рота': '9th Company',
-            'остров': 'Island',
-            'монгол': 'Mongol',
-            'царь': 'Tsar',
-            'поп': 'Priest',
-            ' Determination': 'Determination'
+            'улицы разбитых фонарей': 'Streets of Broken Lights'
         };
 
         // --- Состояние приложения ---
@@ -344,6 +326,9 @@
             shows: [],
             currentModalShowId: null
         };
+
+        // --- Хранилище постеров (кэш) ---
+        let posterCache = {};
 
         // --- Инициализация ---
         document.addEventListener('DOMContentLoaded', () => {
@@ -389,6 +374,20 @@
                 if(window.Telegram && window.Telegram.WebApp.HapticFeedback) {
                     window.Telegram.WebApp.HapticFeedback.notificationOccurred('warning');
                 }
+            }
+        }
+
+        // --- Фоллбэк для постеров ---
+        function showPosterPlaceholder(img) {
+            img.style.display = 'none';
+            const container = img.parentElement;
+            if (container) {
+                container.style.background = 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)';
+                container.innerHTML = `
+                    <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                `;
             }
         }
 
@@ -469,20 +468,6 @@
                     if (allResults.length >= 15) break;
                 }
 
-                if (allResults.length < 5) {
-                    try {
-                        const omdbResults = await searchOMDb(query);
-                        omdbResults.forEach(show => {
-                            if (!seenIds.has(show.id)) {
-                                seenIds.add(show.id);
-                                allResults.push({ ...show, source: 'OMDb' });
-                            }
-                        });
-                    } catch (e) {
-                        console.warn('OMDb failed:', e);
-                    }
-                }
-
                 loader.classList.add('hidden');
                 resultsDiv.innerHTML = '';
 
@@ -495,12 +480,10 @@
                     return;
                 }
 
-                allResults.slice(0, 20).forEach(show => {
+                allResults.slice(0, 20).forEach((show, index) => {
                     const exists = state.shows.find(s => s.id === show.id);
                     
-                    const posterUrl = show.posterUrl && show.posterUrl !== 'N/A' 
-                        ? show.posterUrl 
-                        : 'https://via.placeholder.com/300x450?text=No+Image';
+                    const posterUrl = show.posterUrl || FALLBACK_POSTER;
                     const year = show.year ? `(${show.year})` : '';
 
                     const btnText = exists ? 'В списке' : 'Добавить';
@@ -509,19 +492,46 @@
 
                     const item = document.createElement('div');
                     item.className = 'flex items-center gap-3 p-3 border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer last:border-0';
-                    item.innerHTML = `
-                        <img src="${posterUrl}" class="w-12 h-16 rounded bg-gray-800 object-cover shadow-md flex-shrink-0" onerror="this.src='https://via.placeholder.com/150x220?text=Error'">
-                        <div class="flex-1 min-w-0">
-                            <div class="font-bold text-sm truncate text-white leading-tight mb-1">${show.title}</div>
-                            <div class="text-xs text-gray-400 truncate flex items-center gap-2">
-                                <span>${year}</span>
-                                <span class="source-badge">${show.source}</span>
-                            </div>
+                    
+                    // Картинка с обработкой ошибок
+                    const img = document.createElement('img');
+                    img.src = posterUrl;
+                    img.className = 'w-12 h-16 rounded bg-gray-800 object-cover shadow-md flex-shrink-0';
+                    img.onerror = function() {
+                        this.style.display = 'none';
+                        this.parentElement.style.background = 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)';
+                        this.parentElement.innerHTML = '<svg class="w-6 h-6 mx-auto my-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>';
+                    };
+
+                    const infoDiv = document.createElement('div');
+                    infoDiv.className = 'flex-1 min-w-0';
+                    infoDiv.innerHTML = `
+                        <div class="font-bold text-sm truncate text-white leading-tight mb-1">${show.title}</div>
+                        <div class="text-xs text-gray-400 truncate flex items-center gap-2">
+                            <span>${year}</span>
+                            <span class="source-badge">${show.source}</span>
                         </div>
-                        <button ${disabled} onclick="addShowFromApi('${show.id}', '${show.title.replace(/'/g, "\\'")}', '${posterUrl}')" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-all whitespace-nowrap ${btnClass}">
-                            ${btnText}
-                        </button>
                     `;
+
+                    const btn = document.createElement('button');
+                    btn.disabled = disabled !== '';
+                    btn.className = `px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-all whitespace-nowrap ${btnClass}`;
+                    btn.innerText = btnText;
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        addShowFromApi(show.id, show.title, posterUrl);
+                    };
+
+                    item.appendChild(img);
+                    item.appendChild(infoDiv);
+                    item.appendChild(btn);
+                    
+                    item.onclick = (e) => {
+                        if (e.target !== btn) {
+                            // Можно добавить превью при клике
+                        }
+                    };
+
                     resultsDiv.appendChild(item);
                 });
 
@@ -552,7 +562,7 @@
             return data
                 .filter(item => item.show && item.show.name)
                 .map(item => {
-                    let posterUrl = 'https://via.placeholder.com/300x450?text=No+Image';
+                    let posterUrl = FALLBACK_POSTER;
                     if (item.show.image && item.show.image.medium) {
                         posterUrl = item.show.image.medium;
                     } else if (item.show.image && item.show.image.original) {
@@ -568,29 +578,6 @@
                         rating: item.show.rating ? item.show.rating.average : null
                     };
                 });
-        }
-
-        async function searchOMDb(query) {
-            const response = await fetch(
-                `${OMDB_BASE_URL}?s=${encodeURIComponent(query)}&type=series`
-            );
-            
-            if (!response.ok) {
-                throw new Error(`OMDb: ${response.status}`);
-            }
-            
-            const data = await response.json();
-            
-            if (!data.Search) return [];
-
-            return data.Search
-                .filter(show => show.Title)
-                .map((show, index) => ({
-                    id: `omdb_${show.imdbID || index}_${Date.now()}`,
-                    title: show.Title,
-                    year: show.Year,
-                    posterUrl: show.Poster && show.Poster !== 'N/A' ? show.Poster : 'https://via.placeholder.com/300x450?text=No+Image'
-                }));
         }
 
         function addShowFromApi(id, title, posterUrl) {
@@ -648,35 +635,56 @@
                     ? `<span class="text-yellow-400 font-bold text-sm">${show.rating}</span>` 
                     : '<span class="text-gray-600 font-bold text-sm">--</span>';
 
-                const safePosterUrl = show.posterUrl && show.posterUrl !== 'N/A' 
-                    ? show.posterUrl 
-                    : 'https://via.placeholder.com/300x450?text=No+Image';
+                const safePosterUrl = show.posterUrl || FALLBACK_POSTER;
 
-                card.innerHTML = `
-                    <!-- Кнопка удаления -->
-                    <button onclick="removeShow(event, '${show.id}')" class="delete-btn absolute top-2 right-2 z-20 bg-black/60 hover:bg-red-600 text-white rounded-full p-1.5 backdrop-blur-sm transition-colors border border-white/10">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-
-                    <!-- Постер с открытием модалки -->
-                    <div class="h-52 bg-gray-800 relative overflow-hidden card-poster" onclick="openModal('${show.id}')">
-                        <img src="${safePosterUrl}" class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" alt="${show.title}" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
-                        <div class="absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent"></div>
-                        
-                        <div class="absolute bottom-3 right-3 bg-black/70 backdrop-blur-md px-2 py-1 rounded-md border border-white/10 shadow-lg">
-                            ${ratingDisplay}
-                        </div>
-                    </div>
-                    
-                    <div class="p-3">
-                        <h3 class="font-bold text-sm text-white leading-tight mb-1 line-clamp-2 h-10" title="${show.title}">${show.title}</h3>
-                        <button onclick="openModal('${show.id}')" class="w-full py-2 bg-white/5 hover:bg-white/10 text-[10px] font-bold uppercase tracking-wide rounded-lg transition-colors text-center text-gray-300">
-                            Открыть
-                        </button>
-                    </div>
+                // Кнопка удаления
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-btn absolute top-2 right-2 z-20 bg-black/60 hover:bg-red-600 text-white rounded-full p-1.5 backdrop-blur-sm transition-colors border border-white/10';
+                deleteBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                 `;
+                deleteBtn.onclick = (e) => removeShow(e, show.id);
+
+                // Контейнер постера
+                const posterContainer = document.createElement('div');
+                posterContainer.className = 'h-52 bg-gray-800 relative overflow-hidden card-poster poster-placeholder';
+                posterContainer.onclick = () => openModal(show.id);
+
+                // Изображение
+                const img = document.createElement('img');
+                img.src = safePosterUrl;
+                img.className = 'w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity';
+                img.alt = show.title;
+                img.onerror = () => showPosterPlaceholder(img);
+
+                // Градиент поверх
+                const gradient = document.createElement('div');
+                gradient.className = 'absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent pointer-events-none';
+
+                // Бейдж рейтинга
+                const ratingBadge = document.createElement('div');
+                ratingBadge.className = 'absolute bottom-3 right-3 bg-black/70 backdrop-blur-md px-2 py-1 rounded-md border border-white/10 shadow-lg pointer-events-none';
+                ratingBadge.innerHTML = ratingDisplay;
+
+                posterContainer.appendChild(img);
+                posterContainer.appendChild(gradient);
+                posterContainer.appendChild(ratingBadge);
+
+                // Инфо блок
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'p-3';
+                infoDiv.innerHTML = `
+                    <h3 class="font-bold text-sm text-white leading-tight mb-1 line-clamp-2 h-10" title="${show.title}">${show.title}</h3>
+                    <button onclick="openModal('${show.id}')" class="w-full py-2 bg-white/5 hover:bg-white/10 text-[10px] font-bold uppercase tracking-wide rounded-lg transition-colors text-center text-gray-300">
+                        Открыть
+                    </button>
+                `;
+
+                card.appendChild(deleteBtn);
+                card.appendChild(posterContainer);
+                card.appendChild(infoDiv);
                 container.appendChild(card);
             });
         }
@@ -692,9 +700,19 @@
             state.currentModalShowId = id;
 
             const posterImg = document.getElementById('modalPoster');
-            posterImg.src = show.posterUrl && show.posterUrl !== 'N/A' 
-                ? show.posterUrl 
-                : 'https://via.placeholder.com/300x450?text=No+Image';
+            const posterContainer = document.getElementById('modalPosterContainer');
+            
+            posterImg.src = show.posterUrl || FALLBACK_POSTER;
+            posterImg.style.display = 'block';
+            posterContainer.style.background = '';
+            
+            // Восстанавливаем контейнер если был заменён
+            if (!posterContainer.contains(posterImg)) {
+                posterContainer.innerHTML = '';
+                posterContainer.appendChild(posterImg);
+            }
+            
+            posterImg.onerror = () => showPosterPlaceholder(posterImg);
             
             document.getElementById('modalTitle').innerText = show.title;
             document.getElementById('modalStudio').innerText = 'Сериал';
