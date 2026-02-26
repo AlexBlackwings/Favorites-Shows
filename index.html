@@ -14,6 +14,7 @@
             color: #ffffff;
             overflow-x: hidden;
             -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
 
         .hide-scroll::-webkit-scrollbar { display: none; }
@@ -56,6 +57,7 @@
             transition: transform 0.2s, background-color 0.2s;
             cursor: pointer;
             z-index: 10;
+            -webkit-tap-highlight-color: transparent;
         }
         @media (min-width: 768px) {
             .delete-btn { opacity: 0; }
@@ -68,11 +70,13 @@
 
         .card-poster {
             cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
         }
 
         /* Оптимизация изображений */
         .poster-img {
             transition: opacity 0.3s;
+            image-rendering: -webkit-optimize-contrast;
         }
         .poster-img.loading {
             opacity: 0.5;
@@ -81,12 +85,28 @@
             opacity: 1;
         }
 
-        /* Градиент-заглушка пока грузится */
+        /* Градиент-заглушка */
         .poster-placeholder {
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+
+        /* Мобильные улучшения */
+        @media (max-width: 767px) {
+            .search-results-mobile {
+                max-height: 50vh;
+                position: fixed;
+                top: auto;
+                left: 16px;
+                right: 16px;
+                z-index: 100;
+            }
+        }
+
+        .btn-active {
+            transform: scale(0.95);
         }
     </style>
 </head>
@@ -98,14 +118,15 @@
                 <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-purple-600 flex items-center justify-center text-sm font-bold shadow-lg shadow-blue-900/50" id="userAvatar">U</div>
                 <h1 class="text-lg font-bold tracking-tight text-white">Мои Сериалы</h1>
             </div>
-            <button onclick="clearAllData()" class="text-xs text-gray-500 hover:text-red-400 transition-colors">
+            <button onclick="clearAllData()" class="text-xs text-gray-500 hover:text-red-400 transition-colors px-2 py-1">
                 Сброс
             </button>
         </div>
         
-        <div class="relative">
+        <div class="relative" id="searchContainer">
             <input type="text" id="searchInput" placeholder="Поиск сериалов..." 
-                class="w-full glass-input rounded-xl pl-4 pr-10 py-3 text-sm placeholder-gray-500 transition-all shadow-inner">
+                class="w-full glass-input rounded-xl pl-4 pr-10 py-3 text-sm placeholder-gray-500 transition-all shadow-inner"
+                autocomplete="off">
             
             <div id="searchLoader" class="absolute right-3 top-3 hidden">
                 <div class="loader"></div>
@@ -177,97 +198,159 @@
             </div>
 
             <div class="flex gap-3">
-                <button onclick="saveImpressions()" class="flex-1 bg-white text-black py-3 rounded-xl font-bold text-sm">Сохранить</button>
-                <button onclick="closeModal()" class="flex-1 bg-gray-800 text-white py-3 rounded-xl font-bold text-sm">Закрыть</button>
+                <button onclick="saveImpressions()" class="flex-1 bg-white text-black py-3 rounded-xl font-bold text-sm active:scale-95 transition-transform">Сохранить</button>
+                <button onclick="closeModal()" class="flex-1 bg-gray-800 text-white py-3 rounded-xl font-bold text-sm active:scale-95 transition-transform">Закрыть</button>
             </div>
         </div>
     </div>
 
     <script>
         // ============================================
-        // 🚀 ОПТИМИЗИРОВАННЫЕ ИСТОЧНИКИ ПОСТЕРОВ
-        // ============================================
-        // Приоритет: 1) ImageTMDB (быстрый CDN) 
-        //            2) OMDb (разные источники)
-        //            3) TVMaze (медленный, запасной)
+        // ИСТОЧНИКИ ПОСТЕРОВ (оптимизированные)
         // ============================================
         const TVMAZE_BASE_URL = 'https://api.tvmaze.com';
         const OMDB_BASE_URL = 'https://www.omdbapi.com';
         
-        // Быстрый CDN для постеров (используем TMDB изображения через прокси)
+        // Надёжный CDN для постеров
         const IMAGE_CDN_BASE = 'https://image.tmdb.org/t/p/w342';
 
-        // Кэш изображений в localStorage
-        const IMAGE_CACHE_KEY = 'tma_poster_cache';
-        
-        // Словарь с TMDB ID для популярных сериалов (для быстрых постеров)
+        // Словарь с TMDB ID для популярных сериалов
         const POPULAR_SHOWS_TMDB = {
             'the witcher': '71912',
+            'ведьмак': '71912',
             'the mandalorian': '82856',
+            'мандалорец': '82856',
             'sons of anarchy': '1409',
+            'сыны анархии': '1409',
             'she-hulk': '92782',
+            'женщина халк': '92782',
             'breaking bad': '1396',
+            'во все тяжкие': '1396',
             'better call saul': '60059',
+            'лучше звоните солу': '60059',
             'stranger things': '66732',
+            'очень странные дела': '66732',
             'game of thrones': '1399',
+            'игра престолов': '1399',
             'chernobyl': '87108',
+            'чернобыль': '87108',
             'dark': '70523',
+            'тьма': '70523',
             'the office': '2316',
+            'офис': '2316',
             'friends': '1668',
+            'друзья': '1668',
             'sherlock': '1988',
+            'шерлок': '1988',
             'rick and morty': '60624',
+            'рик и морти': '60624',
             'squid game': '93405',
+            'игра в кальмара': '93405',
             'euphoria': '85552',
+            'эйфория': '85552',
             'peaky blinders': '60574',
+            'острые козырьки': '60574',
             'black mirror': '42009',
+            'черное зеркало': '42009',
             'the boys': '76479',
+            'пацаны': '76479',
             'wednesday': '119051',
+            'уэнсдей': '119051',
             'arcane': '94605',
+            'аркейн': '94605',
             'the umbrella academy': '75006',
+            'академия амбрелла': '75006',
             'ozark': '69740',
+            'озарк': '69740',
             'the crown': '65494',
+            'корона': '65494',
             'sex education': '81356',
+            'сексуальное воспитание': '81356',
             'money heist': '71446',
+            'бумажный дом': '71446',
+            'la casa de papel': '71446',
             'supernatural': '1622',
+            'сверхъестественное': '1622',
             'scrubs': '4556',
+            'клиник': '4556',
             'the big bang theory': '1418',
+            'теория большого взрыва': '1418',
             'brooklyn nine-nine': '48891',
+            'бруклин 99': '48891',
             'the walking dead': '1402',
+            'ход мертвецов': '1402',
             'doctor who': '57243',
+            'доктор кто': '57243',
             'the x-files': '4087',
+            'секретные материалы': '4087',
             'star trek': '65334',
+            'звездный путь': '65334',
             'altered carbon': '68421',
+            'видоизмененный углерод': '68421',
             'the handmaid\'s tale': '69478',
+            'рассказ служанки': '69478',
             'westworld': '63247',
+            'мир дикого запада': '63247',
             'true detective': '46648',
+            'настоящий детектив': '46648',
             'fargo': '60622',
+            'фарго': '60622',
             'the sopranos': '1398',
+            'клан сопрано': '1398',
             'the wire': '1438',
+            'прослушка': '1438',
             'house of cards': '1425',
+            'карточный домик': '1425',
             'the great': '87739',
+            'великая': '87739',
             'good omens': '82506',
+            'благие знамения': '82506',
             'victoria': '66788',
+            'виктория': '66788',
             'downton abbey': '12650',
+            'аббатство даунтон': '12650',
             'shameless': '34307',
-            'taboo': '65334',
+            'шрэм': '34307',
+            'taboo': '67743',
+            'табу': '67743',
             'boardwalk empire': '1434',
+            'подпольная империя': '1434',
             'american horror story': '1413',
+            'американская история ужасов': '1413',
             'american gods': '63351',
+            'американские боги': '63351',
             'shadow and bone': '85720',
+            'санкта': '85720',
+            'тень и кость': '85720',
             'the lord of the rings: the rings of power': '84773',
+            'кольцо власти': '84773',
+            'властелин колец': '84773',
             'resident evil': '90328',
+            'обитель зла': '90328',
             'arrow': '1412',
+            'стрела': '1412',
             'the flash': '60735',
+            'флэш': '60735',
             'supergirl': '62633',
+            'супергёрл': '62633',
             'titans': '75820',
+            'титаны': '75820',
             'hawaii five-0': '32806',
+            'гавайи 50': '32806',
             'ncis': '4614',
+            'морская полиция': '4614',
             'the kitchen': '58494',
+            'кухня': '58494',
             'interns': '62016',
+            'интерны': '62016',
             'physruk': '62891',
+            'физрук': '62891',
             'major': '76669',
+            'мажор': '76669',
             'trigger': '95057',
-            'boys word': '213714'
+            'триггер': '95057',
+            'boys word': '213714',
+            'слово пацана': '213714'
         };
 
         // Словарь переводов
@@ -345,49 +428,7 @@
             'молодежка': 'Molodezhka',
             'кухня': 'Kitchen',
             'отель элеон': 'Hotel Eleon',
-            'полицейский с рублевки': 'Policeman from Rublevka',
-            'моя прекрасная няня': 'My Fair Nanny',
-            'не родись красивой': 'Dont Be Born Beautiful',
-            'бедная настя': 'Poor Nastya',
-            'каменская': 'Kamenskaya',
-            'бандитский петербург': 'Bandit Petersburg',
-            'улицы разбитых фонарей': 'Streets of Broken Lights',
-            'менты': 'Menty',
-            'глухарь': 'Glukhar',
-            'карпов': 'Karpov',
-            'мосгаз': 'Mosgaz',
-            'палач': 'Executioner',
-            'черная кошка': 'Black Cat',
-            'ленинград 46': 'Leningrad 46',
-            'оттепель': 'Thaw',
-            'софия': 'Sophia',
-            'екатерина': 'Catherine',
-            'григорий р': 'Grigory R',
-            'романовы': 'Romanovs',
-            'красная королева': 'Red Queen',
-            'золотая орда': 'Golden Horde',
-            'территория': 'Territory',
-            'контейнер': 'Container',
-            'последний министр': 'Last Minister',
-            'чумной доктор': 'Plague Doctor',
-            'нормальный только я': 'Normal Only Me',
-            'внук космонавта': 'Astronaut Grandson',
-            'кафе куба': 'Cafe Cuba',
-            'идеальная пара': 'Perfect Pair',
-            'давай разведемся': 'Lets Divorce',
-            'девки': 'Girls',
-            'бесы': 'Demons',
-            'пепел': 'Ash',
-            'штрафник': 'Penal Battalion',
-            'диверсант': 'Saboteur',
-            'смерш': 'Smersh',
-            'белая гвардия': 'White Guard',
-            'жизнь и судьба': 'Life and Fate',
-            'тихий дон': 'Quiet Don',
-            'мастер и маргарита': 'Master and Margarita',
-            'идиот': 'Idiot',
-            'анна каренина': 'Anna Karenina',
-            'война и мир': 'War and Peace'
+            'полицейский с рублевки': 'Policeman from Rublevka'
         };
 
         // --- Состояние приложения ---
@@ -396,23 +437,6 @@
             shows: [],
             currentModalShowId: null
         };
-
-        // --- Кэш изображений ---
-        function getImageCache() {
-            try {
-                return JSON.parse(localStorage.getItem(IMAGE_CACHE_KEY) || '{}');
-            } catch {
-                return {};
-            }
-        }
-
-        function saveImageCache(cache) {
-            try {
-                localStorage.setItem(IMAGE_CACHE_KEY, JSON.stringify(cache));
-            } catch {
-                // Игнорируем ошибки кэша
-            }
-        }
 
         // --- Инициализация ---
         document.addEventListener('DOMContentLoaded', () => {
@@ -483,11 +507,18 @@
                 }, 600);
             });
 
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('.relative')) {
-                    resultsDiv.classList.add('hidden');
-                }
-            });
+            // Закрытие поиска при клике вне области
+            document.addEventListener('touchstart', handleOutsideClick);
+            document.addEventListener('click', handleOutsideClick);
+        }
+
+        function handleOutsideClick(e) {
+            const searchContainer = document.getElementById('searchContainer');
+            const resultsDiv = document.getElementById('searchResults');
+            
+            if (!searchContainer.contains(e.target)) {
+                resultsDiv.classList.add('hidden');
+            }
         }
 
         // Транслитерация
@@ -504,9 +535,9 @@
 
         // Получение быстрого постера через TMDB CDN
         function getFastPosterUrl(showName) {
+            if (!showName) return null;
             const lowerName = showName.toLowerCase();
             
-            // Проверяем словарь популярных шоу
             for (const [key, tmdbId] of Object.entries(POPULAR_SHOWS_TMDB)) {
                 if (lowerName.includes(key)) {
                     return `${IMAGE_CDN_BASE}${tmdbId}.jpg`;
@@ -514,22 +545,6 @@
             }
             
             return null;
-        }
-
-        // Загрузка изображения с таймаутом
-        function loadImageWithTimeout(src, timeout = 5000) {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.onload = () => resolve(src);
-                img.onerror = () => reject(new Error('Failed to load'));
-                
-                const timer = setTimeout(() => {
-                    img.src = '';
-                    reject(new Error('Timeout'));
-                }, timeout);
-                
-                img.src = src;
-            });
         }
 
         async function performSearch(query) {
@@ -574,14 +589,14 @@
                                     // ПРИОРИТЕТ 1: Быстрый CDN постер
                                     let posterUrl = getFastPosterUrl(item.show.name);
                                     
-                                    // ПРИОРИТЕТ 2: TVMaze medium (быстрее чем original)
+                                    // ПРИОРИТЕТ 2: TVMaze medium
                                     if (!posterUrl && item.show.image && item.show.image.medium) {
                                         posterUrl = item.show.image.medium;
                                     }
                                     
-                                    // ПРИОРИТЕТ 3: Заглушка
+                                    // ПРИОРИТЕТ 3: Цветная заглушка
                                     if (!posterUrl) {
-                                        posterUrl = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="450"%3E%3Crect fill="%231a1a2e" width="300" height="450"/%3E%3Ctext fill="%23333" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-size="20"%3ENo Image%3C/text%3E%3C/svg%3E';
+                                        posterUrl = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="450"%3E%3Cdefs%3E%3ClinearGradient id="g" x1="0%25" y1="0%25" x2="100%25" y2="100%25"%3E%3Cstop offset="0%25" stop-color="%231a1a2e"/%3E%3Cstop offset="50%25" stop-color="%2316213e"/%3E%3Cstop offset="100%25" stop-color="%230f3460"/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill="url(%23g)" width="300" height="450"/%3E%3Ctext fill="%23333" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-size="20" font-family="Arial"%3ENo Image%3C/text%3E%3C/svg%3E';
                                     }
                                     
                                     allResults.push({
@@ -613,7 +628,6 @@
                                 if (!seenIds.has(uniqueId) && show.Poster && show.Poster !== 'N/A') {
                                     seenIds.add(uniqueId);
                                     
-                                    // Проверяем быстрый CDN
                                     let posterUrl = getFastPosterUrl(show.Title) || show.Poster;
                                     
                                     allResults.push({
@@ -642,7 +656,7 @@
                     const exists = state.shows.find(s => s.id === show.id);
                     
                     const btnText = exists ? 'В списке' : 'Добавить';
-                    const btnClass = exists ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-500';
+                    const btnClass = exists ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-500 active:scale-95';
                     const disabled = exists ? 'disabled' : '';
 
                     const item = document.createElement('div');
@@ -653,7 +667,7 @@
                             <div class="font-bold text-sm truncate text-white">${show.title}</div>
                             <div class="text-xs text-gray-400">${show.year}</div>
                         </div>
-                        <button ${disabled} onclick="addShow('${show.id}', '${show.title.replace(/'/g, "\\'")}', '${show.posterUrl}')" class="px-3 py-1.5 rounded-lg text-xs font-bold ${btnClass}">
+                        <button ${disabled} onclick="addShow('${show.id}', '${show.title.replace(/'/g, "\\'")}', '${show.posterUrl}')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-transform ${btnClass}">
                             ${btnText}
                         </button>
                     `;
@@ -729,7 +743,6 @@
                 const fastPoster = getFastPosterUrl(show.title);
                 if (fastPoster) {
                     displayPosterUrl = fastPoster;
-                    // Обновляем в хранилище
                     show.posterUrl = fastPoster;
                     saveUserData();
                 }
@@ -742,23 +755,31 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 `;
-                deleteBtn.onclick = (e) => removeShow(e, show.id);
+                deleteBtn.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    removeShow(e, show.id);
+                };
 
-                // Постер с lazy loading
+                // Постер
                 const posterContainer = document.createElement('div');
                 posterContainer.className = 'h-52 bg-gray-800 relative overflow-hidden card-poster poster-placeholder';
                 posterContainer.onclick = () => openModal(show.id);
                 
                 const img = document.createElement('img');
-                img.className = 'poster-img absolute inset-0 w-full h-full object-cover';
+                img.className = 'poster-img absolute inset-0 w-full h-full object-cover loading';
                 img.src = displayPosterUrl;
                 img.loading = 'lazy';
                 img.alt = show.title;
+                img.crossOrigin = 'anonymous';
+                
                 img.onerror = function() {
-                    this.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="450"%3E%3Crect fill="%231a1a2e" width="300" height="450"/%3E%3Ctext fill="%23333" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-size="16"%3ENo Image%3C/text%3E%3C/svg%3E';
+                    this.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="450"%3E%3Cdefs%3E%3ClinearGradient id="g2" x1="0%25" y1="0%25" x2="100%25" y2="100%25"%3E%3Cstop offset="0%25" stop-color="%231a1a2e"/%3E%3Cstop offset="50%25" stop-color="%2316213e"/%3E%3Cstop offset="100%25" stop-color="%230f3460"/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill="url(%23g2)" width="300" height="450"/%3E%3Ctext fill="%23444" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-size="16" font-family="Arial"%3ENo Image%3C/text%3E%3C/svg%3E';
                     this.classList.remove('loading');
                     this.classList.add('loaded');
+                    posterContainer.classList.remove('poster-placeholder');
                 };
+                
                 img.onload = function() {
                     this.classList.remove('loading');
                     this.classList.add('loaded');
@@ -766,10 +787,10 @@
                 };
                 
                 const gradient = document.createElement('div');
-                gradient.className = 'absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent';
+                gradient.className = 'absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent pointer-events-none';
                 
                 const ratingBadge = document.createElement('div');
-                ratingBadge.className = 'absolute bottom-3 right-3 bg-black/70 backdrop-blur-md px-2 py-1 rounded-md border border-white/10';
+                ratingBadge.className = 'absolute bottom-3 right-3 bg-black/70 backdrop-blur-md px-2 py-1 rounded-md border border-white/10 pointer-events-none';
                 ratingBadge.innerHTML = ratingDisplay;
 
                 posterContainer.appendChild(img);
@@ -781,7 +802,7 @@
                 infoDiv.className = 'p-3';
                 infoDiv.innerHTML = `
                     <h3 class="font-bold text-sm text-white leading-tight mb-1 line-clamp-2 h-10">${show.title}</h3>
-                    <button class="w-full py-2 bg-white/5 hover:bg-white/10 text-xs font-bold rounded-lg transition-colors text-center text-gray-300">
+                    <button class="w-full py-2 bg-white/5 hover:bg-white/10 active:bg-white/20 text-xs font-bold rounded-lg transition-colors text-center text-gray-300">
                         Открыть
                     </button>
                 `;
@@ -804,14 +825,18 @@
 
             state.currentModalShowId = showId;
 
-            // Проверяем быстрый CDN
             let posterUrl = show.posterUrl;
             const fastPoster = getFastPosterUrl(show.title);
             if (fastPoster) {
                 posterUrl = fastPoster;
             }
 
-            document.getElementById('modalPoster').src = posterUrl;
+            const modalPoster = document.getElementById('modalPoster');
+            modalPoster.src = posterUrl;
+            modalPoster.onerror = function() {
+                this.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="300"%3E%3Crect fill="%231a1a2e" width="200" height="300"/%3E%3Ctext fill="%23444" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-size="14"%3ENo Image%3C/text%3E%3C/svg%3E';
+            };
+
             document.getElementById('modalTitle').textContent = show.title;
             document.getElementById('modalStudio').textContent = '';
             document.getElementById('modalRatingDisplay').textContent = show.rating !== null && show.rating !== undefined ? show.rating : '--';
