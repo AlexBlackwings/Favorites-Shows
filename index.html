@@ -56,12 +56,8 @@
             transition: transform 0.2s, background-color 0.2s;
         }
         @media (min-width: 768px) {
-            .delete-btn {
-                opacity: 0;
-            }
-            .card-container:hover .delete-btn {
-                opacity: 1;
-            }
+            .delete-btn { opacity: 0; }
+            .card-container:hover .delete-btn { opacity: 1; }
         }
         .delete-btn:active {
             transform: scale(0.9);
@@ -83,7 +79,7 @@
         </div>
         
         <div class="relative">
-            <input type="text" id="searchInput" placeholder="Поиск (Ведьмак, Breaking Bad...)..." 
+            <input type="text" id="searchInput" placeholder="Поиск (Ведьмак, Mandalorian...)..." 
                 class="w-full glass-input rounded-xl pl-4 pr-10 py-3 text-sm placeholder-gray-500 transition-all shadow-inner">
             
             <div id="searchLoader" class="absolute right-3 top-3 hidden">
@@ -168,105 +164,12 @@
     </div>
 
     <script>
-        // --- Словарь популярных сериалов (Русский → Английский) ---
-        // Помогает искать русские названия через iTunes API
-        const SHOW_TRANSLATIONS = {
-            'ведьмак': 'The Witcher',
-            'женщина халк': 'She-Hulk',
-            'she-hulk': 'She-Hulk Attorney at Law',
-            'мандалорец': 'The Mandalorian',
-            'сыны анархии': 'Sons of Anarchy',
-            'во все тяжкие': 'Breaking Bad',
-            'лучше звоните солу': 'Better Call Saul',
-            'очень странные дела': 'Stranger Things',
-            'игра престолов': 'Game of Thrones',
-            'дом дракона': 'House of the Dragon',
-            'чернобыль': 'Chernobyl',
-            'тьма': 'Dark',
-            'офис': 'The Office',
-            'друзья': 'Friends',
-            'шерлок': 'Sherlock',
-            'рик и морти': 'Rick and Morty',
-            'игра в кальмара': 'Squid Game',
-            'эйфория': 'Euphoria',
-            'острые козырьки': 'Peaky Blinders',
-            'черное зеркало': 'Black Mirror',
-            'наследники': 'Succession',
-            'белый лотос': 'The White Lotus',
-            'американская история ужасов': 'American Horror Story',
-            'ход мертвецов': 'The Walking Dead',
-            'сверхъестественное': 'Supernatural',
-            'клиник': 'Scrubs',
-            'теория большого взрыва': 'The Big Bang Theory',
-            'как я встретил вашу маму': 'How I Met Your Mother',
-            'ферма': 'The Ranch',
-            'бруклин 99': 'Brooklyn Nine-Nine',
-            'парк юрского периода': 'Jurassic World Camp Cretaceous',
-            'пацаны': 'The Boys',
-            'приглашение': 'The Invitation',
-            'винкс': 'Fate: The Winx Saga',
-            'осень': 'Wednesday',
-            'уэнсдей': 'Wednesday',
-            '1899': '1899',
-            'аркейн': 'Arcane',
-            'песнь льда и пламени': 'Game of Thrones',
-            'кольцо власти': 'The Lord of the Rings: The Rings of Power',
-            'властелин колец': 'The Lord of the Rings: The Rings of Power',
-            'обитель зла': 'Resident Evil',
-            'стрела': 'Arrow',
-            'флэш': 'The Flash',
-            'супергёрл': 'Supergirl',
-            'легенды завтрашнего дня': 'DC\'s Legends of Tomorrow',
-            'титаны': 'Titans',
-            'доктор кто': 'Doctor Who',
-            'секретные материалы': 'The X-Files',
-            'lost': 'Lost',
-            'остаться в живых': 'Lost',
-            'гавайи 50': 'Hawaii Five-0',
-            'морская полиция': 'NCIS',
-            'космос': 'Space: Above and Beyond',
-            'звездный путь': 'Star Trek',
-            'стартрек': 'Star Trek',
-            'звездные войны': 'Star Wars',
-            'американские боги': 'American Gods',
-            'видоизмененный углерод': 'Altered Carbon',
-            'любовь смерть и роботы': 'Love, Death & Robots',
-            'санкта': 'Shadow and Bone',
-            'тень и кость': 'Shadow and Bone',
-            'ведьмак кошмар волка': 'The Witcher: Nightmare of the Wolf',
-            'академия амбрелла': 'The Umbrella Academy',
-            'озарк': 'Ozark',
-            'корона': 'The Crown',
-            'великая': 'The Great',
-            'благие знамения': 'Good Omens',
-            'сексуальное воспитание': 'Sex Education',
-            'после жизни': 'After Life',
-            'дикий': 'The Wilds',
-            'бумажный дом': 'Money Heist',
-            'ла casa de papel': 'Money Heist',
-            'элита': 'Elite',
-            'виктория': 'Victoria',
-            'аббатство даунтон': 'Downton Abbey',
-            'шрэм': 'Shameless',
-            'пик слепых убийц': 'Peaky Blinders',
-            'табу': 'Taboo',
-            'ярость': 'Fury',
-            'мир дикого запада': 'Westworld',
-            'настоящий детектив': 'True Detective',
-            'фарго': 'Fargo',
-            'подпольная империя': 'Boardwalk Empire',
-            'клан сопрано': 'The Sopranos',
-            'прослушка': 'The Wire',
-            'дедвуд': 'Deadwood',
-            'романтики': 'The Romantics',
-            'карточный домик': 'House of Cards',
-            'оранжевый хит': 'Orange Is the New Black',
-            'мыльные оперы': 'Soap',
-            'рассказ служанки': 'The Handmaid\'s Tale',
-            'рассказы из петли': 'Tales from the Loop',
-            'маньяк': 'Maniac',
-            'чернобыль зона отчуждения': 'Chernobyl Zone of Exclusion'
-        };
+        // --- TMDB API Configuration ---
+        // Публичный API ключ для демонстрационных целей
+        // Для продакшена получите свой ключ на https://www.themoviedb.org/settings/api
+        const TMDB_API_KEY = '2dca580c2a14b55200e784d157207b4d';
+        const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+        const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
 
         // --- Состояние приложения ---
         let state = {
@@ -360,67 +263,58 @@
             resultsDiv.classList.remove('hidden');
 
             try {
-                // Проверяем словарь переводов для русских названий
-                const lowerQuery = query.toLowerCase();
-                let searchTerms = [query];
-                
-                // Если нашли русский перевод - добавляем английский термин
-                for (const [ru, en] of Object.entries(SHOW_TRANSLATIONS)) {
-                    if (lowerQuery.includes(ru)) {
-                        searchTerms.push(en);
-                        break;
-                    }
-                }
-
-                // Ищем по всем терминам
-                const allResults = [];
-                const seenIds = new Set();
-
-                for (const term of searchTerms) {
-                    const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=tvShow&limit=50&entity=tvSeason`);
-                    const data = await response.json();
-                    
-                    if (data.resultCount > 0) {
-                        data.results.forEach(item => {
-                            // Группировка по collectionId (уникальный ID сериала, не сезона)
-                            if (item.collectionId && !seenIds.has(item.collectionId)) {
-                                seenIds.add(item.collectionId);
-                                allResults.push(item);
-                            }
-                        });
-                    }
-                }
+                // TMDB API поиск с поддержкой русского языка
+                // language=ru-RU позволяет искать по русским названиям
+                const response = await fetch(
+                    `${TMDB_BASE_URL}/search/tv?api_key=${TMDB_API_KEY}&language=ru-RU&query=${encodeURIComponent(query)}&page=1&include_adult=false`
+                );
+                const data = await response.json();
                 
                 loader.classList.add('hidden');
                 resultsDiv.innerHTML = '';
 
-                if (allResults.length === 0) {
-                    resultsDiv.innerHTML = '<div class="p-4 text-center text-sm text-gray-400">Ничего не найдено 😔<br><span class="text-xs opacity-60">Попробуйте английское название</span></div>';
+                if (!data.results || data.results.length === 0) {
+                    resultsDiv.innerHTML = '<div class="p-4 text-center text-sm text-gray-400">Ничего не найдено 😔<br><span class="text-xs opacity-60">Попробуйте другое название</span></div>';
                     return;
                 }
 
-                allResults.slice(0, 25).forEach(show => {
-                    const uniqueId = show.collectionId;
+                // Фильтруем только сериалы с постерами
+                const validShows = data.results.filter(show => 
+                    show.poster_path && show.name
+                );
+
+                if (validShows.length === 0) {
+                    resultsDiv.innerHTML = '<div class="p-4 text-center text-sm text-gray-400">Найдено без постеров</div>';
+                    return;
+                }
+
+                validShows.slice(0, 20).forEach(show => {
+                    const uniqueId = show.id;
                     const exists = state.shows.find(s => s.id === uniqueId);
                     
+                    // Определяем название (русское или оригинальное)
+                    const title = show.name || show.original_name;
+                    const originalTitle = show.original_name;
+                    const studio = show.origin_country ? show.origin_country.join(', ') : 'Unknown';
+                    
+                    // Формируем URL постера
+                    const posterUrl = show.poster_path 
+                        ? `${TMDB_IMAGE_BASE}${show.poster_path}`
+                        : 'https://via.placeholder.com/300x450?text=No+Image';
+
                     const btnText = exists ? 'В списке' : 'Добавить';
                     const btnClass = exists ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-900/20';
                     const disabled = exists ? 'disabled' : '';
-
-                    let posterUrl = 'https://via.placeholder.com/300x450?text=No+Image';
-                    if (show.artworkUrl100) {
-                        posterUrl = show.artworkUrl100.replace('100x100bb', '600x600bb');
-                    }
 
                     const item = document.createElement('div');
                     item.className = 'flex items-center gap-3 p-3 border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer last:border-0';
                     item.innerHTML = `
                         <img src="${posterUrl}" class="w-12 h-16 rounded bg-gray-800 object-cover shadow-md flex-shrink-0" onerror="this.src='https://via.placeholder.com/150x220?text=Error'">
                         <div class="flex-1 min-w-0">
-                            <div class="font-bold text-sm truncate text-white leading-tight mb-1">${show.collectionName}</div>
-                            <div class="text-xs text-gray-400 truncate">${show.artistName || 'Unknown'}</div>
+                            <div class="font-bold text-sm truncate text-white leading-tight mb-1">${title}</div>
+                            <div class="text-xs text-gray-400 truncate">${originalTitle !== title ? originalTitle : studio} • ${show.first_air_date ? show.first_air_date.substring(0, 4) : '?'}</div>
                         </div>
-                        <button ${disabled} onclick="addShowFromApi(${uniqueId}, '${show.collectionName.replace(/'/g, "\\'")}', '${(show.artistName || 'Unknown').replace(/'/g, "\\'")}', '${posterUrl}')" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-all whitespace-nowrap ${btnClass}">
+                        <button ${disabled} onclick="addShowFromApi(${uniqueId}, '${title.replace(/'/g, "\\'")}', '${originalTitle.replace(/'/g, "\\'")}', '${posterUrl}')" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-all whitespace-nowrap ${btnClass}">
                             ${btnText}
                         </button>
                     `;
@@ -433,12 +327,12 @@
             }
         }
 
-        function addShowFromApi(id, title, studio, posterUrl) {
+        function addShowFromApi(id, title, originalTitle, posterUrl) {
             if (!state.shows.find(s => s.id === id)) {
                 state.shows.push({
                     id: id,
                     title: title,
-                    studio: studio,
+                    originalTitle: originalTitle,
                     posterUrl: posterUrl,
                     rating: null,
                     impressions: ''
@@ -503,7 +397,7 @@
                     </div>
                     <div class="p-3">
                         <h3 class="font-bold text-sm text-white leading-tight mb-1 line-clamp-2 h-10" title="${show.title}">${show.title}</h3>
-                        <p class="text-[10px] text-gray-500 uppercase tracking-wider truncate mb-3">${show.studio}</p>
+                        <p class="text-[10px] text-gray-500 uppercase tracking-wider truncate mb-3">${show.originalTitle !== show.title ? show.originalTitle : 'Сериал'}</p>
                         <button onclick="openModal(${show.id})" class="w-full py-2 bg-white/5 hover:bg-white/10 text-[10px] font-bold uppercase tracking-wide rounded-lg transition-colors text-center text-gray-300">
                             Открыть
                         </button>
@@ -521,7 +415,7 @@
 
             document.getElementById('modalPoster').src = show.posterUrl;
             document.getElementById('modalTitle').innerText = show.title;
-            document.getElementById('modalStudio').innerText = show.studio;
+            document.getElementById('modalStudio').innerText = show.originalTitle !== show.title ? show.originalTitle : 'Оригинальное название';
             document.getElementById('modalRatingDisplay').innerText = show.rating ? show.rating : '--';
             document.getElementById('impressionsInput').value = show.impressions || '';
             
