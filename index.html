@@ -64,22 +64,16 @@
             background-color: rgba(220, 38, 38, 0.8) !important;
         }
 
-        .api-warning {
-            background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.8; }
+        .source-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
         }
     </style>
 </head>
 <body class="h-screen flex flex-col">
-
-    <!-- WARNING BANNER - Remove after getting your API key -->
-    <div id="apiWarning" class="api-warning p-3 text-center text-sm font-bold text-white">
-        ⚠️ ВНИМАНИЕ: Получите бесплатный API ключ на themoviedb.org (инструкция внутри)
-    </div>
 
     <header class="p-4 sticky top-0 z-20 bg-[#0f0f0f]/95 backdrop-blur-md border-b border-white/5 shadow-lg">
         <div class="flex items-center justify-between mb-3">
@@ -179,18 +173,125 @@
 
     <script>
         // ============================================
-        // 🎬 ВАЖНО: ПОЛУЧИТЕ СВОЙ API КЛЮЧ
+        // 📺 БЕСПЛАТНЫЕ API (без ключей)
         // ============================================
-        // 1. Зарегистрируйтесь на https://www.themoviedb.org/
-        // 2. Перейдите в Settings → API → Create
-        // 3. Вставьте ключ ниже вместо 'YOUR_API_KEY_HERE'
+        // TVMaze - полностью бесплатный, без ключа
+        // OMDb - бесплатный тариф (1000 запросов/день)
         // ============================================
-        const TMDB_API_KEY = 'YOUR_API_KEY_HERE'; // ← ЗАМЕНИТЕ ЭТО
-        const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
-        const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
-
-        // Резервный API (OMDb) - работает без ключа для базового поиска
+        const TVMAZE_BASE_URL = 'https://api.tvmaze.com';
         const OMDB_BASE_URL = 'https://www.omdbapi.com';
+
+        // Словарь транслитерации для поиска
+        const TRANSLITERATION = {
+            'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
+            'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+            'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+            'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch',
+            'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
+        };
+
+        // Популярные сериалы для fallback (русское → английское)
+        const SHOW_TRANSLATIONS = {
+            'ведьмак': 'The Witcher',
+            'мандалорец': 'The Mandalorian',
+            'сыны анархии': 'Sons of Anarchy',
+            'женщина халк': 'She-Hulk',
+            'во все тяжкие': 'Breaking Bad',
+            'лучше звоните солу': 'Better Call Saul',
+            'очень странные дела': 'Stranger Things',
+            'игра престолов': 'Game of Thrones',
+            'дом дракона': 'House of the Dragon',
+            'чернобыль': 'Chernobyl',
+            'тьма': 'Dark',
+            'офис': 'The Office',
+            'друзья': 'Friends',
+            'шерлок': 'Sherlock',
+            'рик и морти': 'Rick and Morty',
+            'игра в кальмара': 'Squid Game',
+            'эйфория': 'Euphoria',
+            'острые козырьки': 'Peaky Blinders',
+            'черное зеркало': 'Black Mirror',
+            'наследники': 'Succession',
+            'пацаны': 'The Boys',
+            'уэнсдей': 'Wednesday',
+            'аркейн': 'Arcane',
+            'академия амбрелла': 'The Umbrella Academy',
+            'озарк': 'Ozark',
+            'корона': 'The Crown',
+            'сексуальное воспитание': 'Sex Education',
+            'бумажный дом': 'Money Heist',
+            'элита': 'Elite',
+            'сверхъестественное': 'Supernatural',
+            'клиник': 'Scrubs',
+            'теория большого взрыва': 'The Big Bang Theory',
+            'как я встретил вашу маму': 'How I Met Your Mother',
+            'бруклин 99': 'Brooklyn Nine-Nine',
+            'ход мертвецов': 'The Walking Dead',
+            'lost': 'Lost',
+            'остаться в живых': 'Lost',
+            'доктор кто': 'Doctor Who',
+            'секретные материалы': 'The X-Files',
+            'звездный путь': 'Star Trek',
+            'звездные войны': 'Star Wars',
+            'видоизмененный углерод': 'Altered Carbon',
+            'любовь смерть и роботы': 'Love, Death & Robots',
+            'рассказ служанки': 'The Handmaid\'s Tale',
+            'маньяк': 'Maniac',
+            'мир дикого запада': 'Westworld',
+            'настоящий детектив': 'True Detective',
+            'фарго': 'Fargo',
+            'клан сопрано': 'The Sopranos',
+            'прослушка': 'The Wire',
+            'карточный домик': 'House of Cards',
+            'оранжевый хит': 'Orange Is the New Black',
+            'великая': 'The Great',
+            'благие знамения': 'Good Omens',
+            'после жизни': 'After Life',
+            'виктория': 'Victoria',
+            'аббатство даунтон': 'Downton Abbey',
+            'шрэм': 'Shameless',
+            'табу': 'Taboo',
+            'подпольная империя': 'Boardwalk Empire',
+            'дедвуд': 'Deadwood',
+            'рассказы из петли': 'Tales from the Loop',
+            'американская история ужасов': 'American Horror Story',
+            'американские боги': 'American Gods',
+            'санкта': 'Shadow and Bone',
+            'тень и кость': 'Shadow and Bone',
+            'кольцо власти': 'The Lord of the Rings: The Rings of Power',
+            'властелин колец': 'The Lord of the Rings: The Rings of Power',
+            'обитель зла': 'Resident Evil',
+            'стрела': 'Arrow',
+            'флэш': 'The Flash',
+            'супергёрл': 'Supergirl',
+            'титаны': 'Titans',
+            'гавайи 50': 'Hawaii Five-0',
+            'морская полиция': 'NCIS',
+            'ферма': 'The Ranch',
+            'дикий': 'The Wilds',
+            'ла casa de papel': 'Money Heist',
+            'слово пацана': 'Boys Word',
+            'метод': 'Method',
+            'содержанки': 'Keepers',
+            'топи': 'Topi',
+            'псих': 'Psychopath',
+            'колл-центр': 'Call Center',
+            'чикатило': 'Chikatilo',
+            'триггер': 'Trigger',
+            'мажор': 'Major',
+            'физрук': 'Physruk',
+            'универ': 'Univers',
+            'реальные пацаны': 'Real Guys',
+            'интерны': 'Interns',
+            'воронины': 'Voronins',
+            'сваты': 'Svaty',
+            'папины дочки': 'Daddy Daughters',
+            'молодежка': 'Molodezhka',
+            'кухня': 'Kitchen',
+            'отель элеон': 'Hotel Eleon',
+            'ивановы-ивановы': 'Ivanovs',
+            'полицейский с рублевки': 'Policeman from Rublevka'
+        };
 
         // --- Состояние приложения ---
         let state = {
@@ -201,13 +302,6 @@
 
         // --- Инициализация ---
         document.addEventListener('DOMContentLoaded', () => {
-            // Проверка API ключа
-            if (TMDB_API_KEY === 'YOUR_API_KEY_HERE' || TMDB_API_KEY.length < 10) {
-                document.getElementById('apiWarning').style.display = 'block';
-            } else {
-                document.getElementById('apiWarning').style.display = 'none';
-            }
-
             if (window.Telegram && window.Telegram.WebApp) {
                 window.Telegram.WebApp.ready();
                 window.Telegram.WebApp.expand();
@@ -282,6 +376,13 @@
             });
         }
 
+        // Транслитерация русского в английский
+        function transliterate(text) {
+            return text.toLowerCase().split('').map(char => 
+                TRANSLITERATION[char] || char
+            ).join('');
+        }
+
         async function performSearch(query) {
             const resultsDiv = document.getElementById('searchResults');
             const loader = document.getElementById('searchLoader');
@@ -291,47 +392,75 @@
             resultsDiv.classList.remove('hidden');
 
             try {
-                let results = [];
+                let allResults = [];
+                const seenIds = new Set();
 
-                // ПРИОРИТЕТ 1: TMDB API (основной)
-                if (TMDB_API_KEY !== 'YOUR_API_KEY_HERE' && TMDB_API_KEY.length >= 10) {
-                    try {
-                        results = await searchTMDB(query);
-                    } catch (tmdbError) {
-                        console.warn('TMDB failed, trying OMDb:', tmdbError);
+                // Формируем список поисковых запросов
+                const searchTerms = [query];
+                const lowerQuery = query.toLowerCase();
+
+                // Добавляем перевод если есть в словаре
+                for (const [ru, en] of Object.entries(SHOW_TRANSLATIONS)) {
+                    if (lowerQuery.includes(ru)) {
+                        searchTerms.push(en);
+                        break;
                     }
                 }
 
-                // ПРИОРИТЕТ 2: OMDb API (резервный)
-                if (results.length === 0) {
+                // Добавляем транслитерацию
+                if (/[а-яё]/i.test(query)) {
+                    searchTerms.push(transliterate(query));
+                }
+
+                // Поиск по всем источникам
+                for (const term of searchTerms) {
+                    // ПРИОРИТЕТ 1: TVMaze (полностью бесплатный, без ключа)
                     try {
-                        results = await searchOMDb(query);
-                    } catch (omdbError) {
-                        console.warn('OMDb also failed:', omdbError);
+                        const tvmazeResults = await searchTVMaze(term);
+                        tvmazeResults.forEach(show => {
+                            if (!seenIds.has(show.id)) {
+                                seenIds.add(show.id);
+                                allResults.push({ ...show, source: 'TVMaze' });
+                            }
+                        });
+                    } catch (e) {
+                        console.warn('TVMaze failed:', e);
+                    }
+
+                    // Если нашли достаточно результатов, не продолжаем
+                    if (allResults.length >= 15) break;
+                }
+
+                // ПРИОРИТЕТ 2: OMDb (если TVMaze не дал результатов)
+                if (allResults.length < 5) {
+                    try {
+                        const omdbResults = await searchOMDb(query);
+                        omdbResults.forEach(show => {
+                            if (!seenIds.has(show.id)) {
+                                seenIds.add(show.id);
+                                allResults.push({ ...show, source: 'OMDb' });
+                            }
+                        });
+                    } catch (e) {
+                        console.warn('OMDb failed:', e);
                     }
                 }
 
                 loader.classList.add('hidden');
                 resultsDiv.innerHTML = '';
 
-                if (results.length === 0) {
+                if (allResults.length === 0) {
                     resultsDiv.innerHTML = `
                         <div class="p-4 text-center text-sm text-gray-400">
                             Ничего не найдено 😔<br>
-                            <span class="text-xs opacity-60">Попробуйте английское название</span>
+                            <span class="text-xs opacity-60">
+                                Попробуйте английское название или транслитерацию
+                            </span>
                         </div>`;
                     return;
                 }
 
-                // Убираем дубликаты по ID
-                const seenIds = new Set();
-                const uniqueResults = results.filter(show => {
-                    if (seenIds.has(show.id)) return false;
-                    seenIds.add(show.id);
-                    return true;
-                });
-
-                uniqueResults.slice(0, 20).forEach(show => {
+                allResults.slice(0, 20).forEach(show => {
                     const exists = state.shows.find(s => s.id === show.id);
                     
                     const posterUrl = show.posterUrl || 'https://via.placeholder.com/300x450?text=No+Image';
@@ -347,9 +476,12 @@
                         <img src="${posterUrl}" class="w-12 h-16 rounded bg-gray-800 object-cover shadow-md flex-shrink-0" onerror="this.src='https://via.placeholder.com/150x220?text=Error'">
                         <div class="flex-1 min-w-0">
                             <div class="font-bold text-sm truncate text-white leading-tight mb-1">${show.title}</div>
-                            <div class="text-xs text-gray-400 truncate">${show.originalTitle || ''} ${year}</div>
+                            <div class="text-xs text-gray-400 truncate flex items-center gap-2">
+                                <span>${show.originalTitle || ''} ${year}</span>
+                                <span class="source-badge">${show.source}</span>
+                            </div>
                         </div>
-                        <button ${disabled} onclick="addShowFromApi(${show.id}, '${show.title.replace(/'/g, "\\'")}', '${(show.originalTitle || '').replace(/'/g, "\\'")}', '${posterUrl}')" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-all whitespace-nowrap ${btnClass}">
+                        <button ${disabled} onclick="addShowFromApi('${show.id}', '${show.title.replace(/'/g, "\\'")}', '${(show.originalTitle || '').replace(/'/g, "\\'")}', '${posterUrl}')" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-all whitespace-nowrap ${btnClass}">
                             ${btnText}
                         </button>
                     `;
@@ -367,32 +499,34 @@
             }
         }
 
-        // Поиск через TMDB
-        async function searchTMDB(query) {
+        // Поиск через TVMaze (бесплатно, без ключа)
+        async function searchTVMaze(query) {
             const response = await fetch(
-                `${TMDB_BASE_URL}/search/tv?api_key=${TMDB_API_KEY}&language=ru-RU&query=${encodeURIComponent(query)}&page=1&include_adult=false`
+                `${TVMAZE_BASE_URL}/search/shows?q=${encodeURIComponent(query)}`
             );
             
             if (!response.ok) {
-                throw new Error(`TMDB: ${response.status}`);
+                throw new Error(`TVMaze: ${response.status}`);
             }
             
             const data = await response.json();
             
-            if (!data.results) return [];
+            if (!data || data.length === 0) return [];
 
-            return data.results
-                .filter(show => show.poster_path && show.name)
-                .map(show => ({
-                    id: show.id,
-                    title: show.name,
-                    originalTitle: show.original_name,
-                    year: show.first_air_date ? show.first_air_date.substring(0, 4) : '',
-                    posterUrl: `${TMDB_IMAGE_BASE}${show.poster_path}`
+            return data
+                .filter(item => item.show && item.show.image && item.show.name)
+                .map(item => ({
+                    id: `tvmaze_${item.show.id}`,
+                    title: item.show.name,
+                    originalTitle: item.show.language !== 'en' ? item.show.name : (item.show.officialSite ? item.show.name : ''),
+                    year: item.show.premiered ? item.show.premiered.substring(0, 4) : '',
+                    posterUrl: item.show.image.medium || item.show.image.original,
+                    network: item.show.network ? item.show.network.name : '',
+                    rating: item.show.rating ? item.show.rating.average : null
                 }));
         }
 
-        // Поиск через OMDb (резервный)
+        // Поиск через OMDb (бесплатный тариф)
         async function searchOMDb(query) {
             const response = await fetch(
                 `${OMDB_BASE_URL}?s=${encodeURIComponent(query)}&type=series`
@@ -407,9 +541,9 @@
             if (!data.Search) return [];
 
             return data.Search
-                .filter(show => show.Poster !== 'N/A')
+                .filter(show => show.Poster !== 'N/A' && show.Title)
                 .map((show, index) => ({
-                    id: `omdb_${index}_${Date.now()}`,
+                    id: `omdb_${show.imdbID || index}_${Date.now()}`,
                     title: show.Title,
                     originalTitle: show.Title,
                     year: show.Year,
