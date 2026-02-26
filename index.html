@@ -54,6 +54,8 @@
         .delete-btn {
             opacity: 1;
             transition: transform 0.2s, background-color 0.2s;
+            cursor: pointer;
+            z-index: 20;
         }
         @media (min-width: 768px) {
             .delete-btn { opacity: 0; }
@@ -70,6 +72,10 @@
             border-radius: 4px;
             background: rgba(59, 130, 246, 0.2);
             color: #60a5fa;
+        }
+
+        .card-poster {
+            cursor: pointer;
         }
     </style>
 </head>
@@ -124,15 +130,16 @@
         </div>
     </main>
 
-    <div id="detailModal" class="fixed inset-0 z-50 hidden flex items-end sm:items-center justify-center pointer-events-none">
-        <div class="modal-backdrop absolute inset-0 pointer-events-auto" onclick="closeModal()"></div>
+    <!-- Модальное окно -->
+    <div id="detailModal" class="fixed inset-0 z-50 hidden">
+        <div class="modal-backdrop absolute inset-0" onclick="closeModal()"></div>
         
-        <div class="bg-[#1a1a1a] w-full sm:w-[400px] sm:rounded-3xl rounded-t-3xl p-6 max-h-[85vh] overflow-y-auto slide-up pointer-events-auto border-t border-white/10 relative">
+        <div class="absolute bottom-0 left-0 right-0 bg-[#1a1a1a] rounded-t-3xl p-6 max-h-[85vh] overflow-y-auto slide-up border-t border-white/10">
             
             <div class="w-12 h-1.5 bg-gray-700 rounded-full mx-auto mb-6 opacity-50"></div>
             
             <div class="flex gap-5 mb-6">
-                <img id="modalPoster" class="w-28 h-40 rounded-xl bg-gray-800 flex-shrink-0 object-cover shadow-2xl border border-white/10" src="" alt="Poster">
+                <img id="modalPoster" class="w-28 h-40 rounded-xl bg-gray-800 flex-shrink-0 object-cover shadow-2xl border border-white/10" src="" alt="Poster" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
                 <div class="flex-1 flex flex-col justify-center">
                     <h2 id="modalTitle" class="text-xl font-bold text-white leading-tight mb-1"></h2>
                     <p id="modalStudio" class="text-sm text-gray-400 mb-4 line-clamp-2"></p>
@@ -147,6 +154,7 @@
                 </div>
             </div>
 
+            <!-- Поле оценки -->
             <div id="ratingInputContainer" class="mb-6 hidden bg-white/5 p-4 rounded-xl border border-white/5">
                 <label class="block text-xs text-gray-400 mb-2 font-medium">Ваша оценка</label>
                 <div class="flex gap-2">
@@ -155,12 +163,13 @@
                 </div>
             </div>
 
+            <!-- Впечатления -->
             <div class="mb-24 sm:mb-6">
                 <label class="block text-sm font-medium text-gray-300 mb-2">Ваши впечатления</label>
                 <textarea id="impressionsInput" rows="6" class="w-full glass-input rounded-xl p-4 text-sm resize-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="Напишите рецензию..."></textarea>
             </div>
 
-            <div class="flex gap-3 mt-6 sticky bottom-0 bg-[#1a1a1a] pt-4 border-t border-white/5">
+            <div class="flex gap-3 mt-6">
                 <button onclick="saveImpressions()" class="flex-1 bg-white text-black py-3.5 rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors">
                     Сохранить
                 </button>
@@ -175,13 +184,10 @@
         // ============================================
         // 📺 БЕСПЛАТНЫЕ API (без ключей)
         // ============================================
-        // TVMaze - полностью бесплатный, без ключа
-        // OMDb - бесплатный тариф (1000 запросов/день)
-        // ============================================
         const TVMAZE_BASE_URL = 'https://api.tvmaze.com';
         const OMDB_BASE_URL = 'https://www.omdbapi.com';
 
-        // Словарь транслитерации для поиска
+        // Транслитерация
         const TRANSLITERATION = {
             'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
             'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
@@ -190,7 +196,7 @@
             'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
         };
 
-        // Популярные сериалы для fallback (русское → английское)
+        // Словарь переводов
         const SHOW_TRANSLATIONS = {
             'ведьмак': 'The Witcher',
             'мандалорец': 'The Mandalorian',
@@ -290,7 +296,46 @@
             'кухня': 'Kitchen',
             'отель элеон': 'Hotel Eleon',
             'ивановы-ивановы': 'Ivanovs',
-            'полицейский с рублевки': 'Policeman from Rublevka'
+            'полицейский с рублевки': 'Policeman from Rublevka',
+            'моя прекрасная няня': 'My Fair Nanny',
+            'не родись красивой': 'Do Not Be Born Beautiful',
+            'бедная настя': 'Poor Nastya',
+            'каменская': 'Kamenskaya',
+            'бандитский петербург': 'Bandit Petersburg',
+            'улицы разбитых фонарей': 'Streets of Broken Lights',
+            'менты': 'Cops',
+            'тайны следствия': 'Investigation Secrets',
+            'детективы': 'Detectives',
+            'следователь давидц': 'Investigator Davids',
+            'агент национальной безопасности': 'National Security Agent',
+            'особенности национальной': 'Peculiarities of National',
+            'даун хаус': 'Down House',
+            'день радио': 'Radio Day',
+            'день выборов': 'Election Day',
+            'что творят мужчины': 'What Men Do',
+            'горько': 'Bitter',
+            'самый лучший день': 'The Best Day',
+            'ёлки': 'Fir Trees',
+            'лесник': 'Forester',
+            'гражданин начальник': 'Citizen Chief',
+            'каменская': 'Kamenskaya',
+            'марш турецкого': 'Turkish March',
+            'бриганда': 'Brigada',
+            'бумер': 'Bumer',
+            'бой с тенью': 'Shadow Fight',
+            'ночной дозор': 'Night Watch',
+            'дневной дозор': 'Day Watch',
+            'сталинград': 'Stalingrad',
+            'экипаж': 'Crew',
+            'антикиллер': 'Antikiller',
+            'жмурки': 'Jmurki',
+            'свои': 'Own',
+            '9 рота': '9th Company',
+            'остров': 'Island',
+            'монгол': 'Mongol',
+            'царь': 'Tsar',
+            'поп': 'Priest',
+            ' Determination': 'Determination'
         };
 
         // --- Состояние приложения ---
@@ -376,7 +421,6 @@
             });
         }
 
-        // Транслитерация русского в английский
         function transliterate(text) {
             return text.toLowerCase().split('').map(char => 
                 TRANSLITERATION[char] || char
@@ -395,11 +439,9 @@
                 let allResults = [];
                 const seenIds = new Set();
 
-                // Формируем список поисковых запросов
                 const searchTerms = [query];
                 const lowerQuery = query.toLowerCase();
 
-                // Добавляем перевод если есть в словаре
                 for (const [ru, en] of Object.entries(SHOW_TRANSLATIONS)) {
                     if (lowerQuery.includes(ru)) {
                         searchTerms.push(en);
@@ -407,14 +449,11 @@
                     }
                 }
 
-                // Добавляем транслитерацию
                 if (/[а-яё]/i.test(query)) {
                     searchTerms.push(transliterate(query));
                 }
 
-                // Поиск по всем источникам
                 for (const term of searchTerms) {
-                    // ПРИОРИТЕТ 1: TVMaze (полностью бесплатный, без ключа)
                     try {
                         const tvmazeResults = await searchTVMaze(term);
                         tvmazeResults.forEach(show => {
@@ -427,11 +466,9 @@
                         console.warn('TVMaze failed:', e);
                     }
 
-                    // Если нашли достаточно результатов, не продолжаем
                     if (allResults.length >= 15) break;
                 }
 
-                // ПРИОРИТЕТ 2: OMDb (если TVMaze не дал результатов)
                 if (allResults.length < 5) {
                     try {
                         const omdbResults = await searchOMDb(query);
@@ -453,9 +490,7 @@
                     resultsDiv.innerHTML = `
                         <div class="p-4 text-center text-sm text-gray-400">
                             Ничего не найдено 😔<br>
-                            <span class="text-xs opacity-60">
-                                Попробуйте английское название или транслитерацию
-                            </span>
+                            <span class="text-xs opacity-60">Попробуйте английское название</span>
                         </div>`;
                     return;
                 }
@@ -463,7 +498,9 @@
                 allResults.slice(0, 20).forEach(show => {
                     const exists = state.shows.find(s => s.id === show.id);
                     
-                    const posterUrl = show.posterUrl || 'https://via.placeholder.com/300x450?text=No+Image';
+                    const posterUrl = show.posterUrl && show.posterUrl !== 'N/A' 
+                        ? show.posterUrl 
+                        : 'https://via.placeholder.com/300x450?text=No+Image';
                     const year = show.year ? `(${show.year})` : '';
 
                     const btnText = exists ? 'В списке' : 'Добавить';
@@ -477,11 +514,11 @@
                         <div class="flex-1 min-w-0">
                             <div class="font-bold text-sm truncate text-white leading-tight mb-1">${show.title}</div>
                             <div class="text-xs text-gray-400 truncate flex items-center gap-2">
-                                <span>${show.originalTitle || ''} ${year}</span>
+                                <span>${year}</span>
                                 <span class="source-badge">${show.source}</span>
                             </div>
                         </div>
-                        <button ${disabled} onclick="addShowFromApi('${show.id}', '${show.title.replace(/'/g, "\\'")}', '${(show.originalTitle || '').replace(/'/g, "\\'")}', '${posterUrl}')" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-all whitespace-nowrap ${btnClass}">
+                        <button ${disabled} onclick="addShowFromApi('${show.id}', '${show.title.replace(/'/g, "\\'")}', '${posterUrl}')" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-all whitespace-nowrap ${btnClass}">
                             ${btnText}
                         </button>
                     `;
@@ -499,7 +536,6 @@
             }
         }
 
-        // Поиск через TVMaze (бесплатно, без ключа)
         async function searchTVMaze(query) {
             const response = await fetch(
                 `${TVMAZE_BASE_URL}/search/shows?q=${encodeURIComponent(query)}`
@@ -514,19 +550,26 @@
             if (!data || data.length === 0) return [];
 
             return data
-                .filter(item => item.show && item.show.image && item.show.name)
-                .map(item => ({
-                    id: `tvmaze_${item.show.id}`,
-                    title: item.show.name,
-                    originalTitle: item.show.language !== 'en' ? item.show.name : (item.show.officialSite ? item.show.name : ''),
-                    year: item.show.premiered ? item.show.premiered.substring(0, 4) : '',
-                    posterUrl: item.show.image.medium || item.show.image.original,
-                    network: item.show.network ? item.show.network.name : '',
-                    rating: item.show.rating ? item.show.rating.average : null
-                }));
+                .filter(item => item.show && item.show.name)
+                .map(item => {
+                    let posterUrl = 'https://via.placeholder.com/300x450?text=No+Image';
+                    if (item.show.image && item.show.image.medium) {
+                        posterUrl = item.show.image.medium;
+                    } else if (item.show.image && item.show.image.original) {
+                        posterUrl = item.show.image.original;
+                    }
+
+                    return {
+                        id: `tvmaze_${item.show.id}`,
+                        title: item.show.name,
+                        year: item.show.premiered ? item.show.premiered.substring(0, 4) : '',
+                        posterUrl: posterUrl,
+                        network: item.show.network ? item.show.network.name : '',
+                        rating: item.show.rating ? item.show.rating.average : null
+                    };
+                });
         }
 
-        // Поиск через OMDb (бесплатный тариф)
         async function searchOMDb(query) {
             const response = await fetch(
                 `${OMDB_BASE_URL}?s=${encodeURIComponent(query)}&type=series`
@@ -541,22 +584,20 @@
             if (!data.Search) return [];
 
             return data.Search
-                .filter(show => show.Poster !== 'N/A' && show.Title)
+                .filter(show => show.Title)
                 .map((show, index) => ({
                     id: `omdb_${show.imdbID || index}_${Date.now()}`,
                     title: show.Title,
-                    originalTitle: show.Title,
                     year: show.Year,
-                    posterUrl: show.Poster
+                    posterUrl: show.Poster && show.Poster !== 'N/A' ? show.Poster : 'https://via.placeholder.com/300x450?text=No+Image'
                 }));
         }
 
-        function addShowFromApi(id, title, originalTitle, posterUrl) {
+        function addShowFromApi(id, title, posterUrl) {
             if (!state.shows.find(s => s.id === id)) {
                 state.shows.push({
                     id: id,
                     title: title,
-                    originalTitle: originalTitle,
                     posterUrl: posterUrl,
                     rating: null,
                     impressions: ''
@@ -571,8 +612,10 @@
             }
         }
 
-        function removeShow(e, id) {
-            e.stopPropagation();
+        // --- Удаление сериала ---
+        function removeShow(event, id) {
+            event.preventDefault();
+            event.stopPropagation();
             
             if(confirm('Удалить этот сериал из списка?')) {
                 state.shows = state.shows.filter(s => s.id !== id);
@@ -583,6 +626,7 @@
             }
         }
 
+        // --- Рендеринг списка ---
         function renderShowList() {
             const container = document.getElementById('showList');
             const emptyState = document.getElementById('emptyState');
@@ -600,29 +644,35 @@
                 const card = document.createElement('div');
                 card.className = 'card-container snap-center flex-shrink-0 w-36 bg-[#1a1a1a] rounded-2xl overflow-hidden shadow-lg border border-white/5 relative group transition-transform hover:scale-[1.03] active:scale-95 duration-200';
                 
-                const ratingDisplay = show.rating 
+                const ratingDisplay = show.rating !== null && show.rating !== undefined
                     ? `<span class="text-yellow-400 font-bold text-sm">${show.rating}</span>` 
                     : '<span class="text-gray-600 font-bold text-sm">--</span>';
 
+                const safePosterUrl = show.posterUrl && show.posterUrl !== 'N/A' 
+                    ? show.posterUrl 
+                    : 'https://via.placeholder.com/300x450?text=No+Image';
+
                 card.innerHTML = `
-                    <button onclick="removeShow(event, ${show.id})" class="delete-btn absolute top-2 right-2 z-10 bg-black/60 hover:bg-red-600 text-white rounded-full p-1.5 backdrop-blur-sm transition-colors border border-white/10">
+                    <!-- Кнопка удаления -->
+                    <button onclick="removeShow(event, '${show.id}')" class="delete-btn absolute top-2 right-2 z-20 bg-black/60 hover:bg-red-600 text-white rounded-full p-1.5 backdrop-blur-sm transition-colors border border-white/10">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
 
-                    <div class="h-52 bg-gray-800 relative overflow-hidden" onclick="openModal(${show.id})">
-                        <img src="${show.posterUrl}" class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" alt="${show.title}" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
+                    <!-- Постер с открытием модалки -->
+                    <div class="h-52 bg-gray-800 relative overflow-hidden card-poster" onclick="openModal('${show.id}')">
+                        <img src="${safePosterUrl}" class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" alt="${show.title}" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
                         <div class="absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent"></div>
                         
                         <div class="absolute bottom-3 right-3 bg-black/70 backdrop-blur-md px-2 py-1 rounded-md border border-white/10 shadow-lg">
                             ${ratingDisplay}
                         </div>
                     </div>
+                    
                     <div class="p-3">
                         <h3 class="font-bold text-sm text-white leading-tight mb-1 line-clamp-2 h-10" title="${show.title}">${show.title}</h3>
-                        <p class="text-[10px] text-gray-500 uppercase tracking-wider truncate mb-3">${show.originalTitle !== show.title ? show.originalTitle : 'Сериал'}</p>
-                        <button onclick="openModal(${show.id})" class="w-full py-2 bg-white/5 hover:bg-white/10 text-[10px] font-bold uppercase tracking-wide rounded-lg transition-colors text-center text-gray-300">
+                        <button onclick="openModal('${show.id}')" class="w-full py-2 bg-white/5 hover:bg-white/10 text-[10px] font-bold uppercase tracking-wide rounded-lg transition-colors text-center text-gray-300">
                             Открыть
                         </button>
                     </div>
@@ -631,22 +681,28 @@
             });
         }
 
+        // --- Модальное окно ---
         function openModal(id) {
             const show = state.shows.find(s => s.id === id);
-            if (!show) return;
+            if (!show) {
+                console.error('Show not found:', id);
+                return;
+            }
 
             state.currentModalShowId = id;
 
-            document.getElementById('modalPoster').src = show.posterUrl;
+            const posterImg = document.getElementById('modalPoster');
+            posterImg.src = show.posterUrl && show.posterUrl !== 'N/A' 
+                ? show.posterUrl 
+                : 'https://via.placeholder.com/300x450?text=No+Image';
+            
             document.getElementById('modalTitle').innerText = show.title;
-            document.getElementById('modalStudio').innerText = show.originalTitle !== show.title ? show.originalTitle : 'Оригинальное название';
-            document.getElementById('modalRatingDisplay').innerText = show.rating ? show.rating : '--';
+            document.getElementById('modalStudio').innerText = 'Сериал';
+            document.getElementById('modalRatingDisplay').innerText = (show.rating !== null && show.rating !== undefined) ? show.rating : '--';
             document.getElementById('impressionsInput').value = show.impressions || '';
             
             document.getElementById('ratingInputContainer').classList.add('hidden');
-            
-            const modal = document.getElementById('detailModal');
-            modal.classList.remove('hidden');
+            document.getElementById('detailModal').classList.remove('hidden');
             
             if(window.Telegram && window.Telegram.WebApp.HapticFeedback) {
                 window.Telegram.WebApp.HapticFeedback.selectionChanged();
@@ -663,7 +719,7 @@
             const input = document.getElementById('ratingInput');
             const show = state.shows.find(s => s.id === state.currentModalShowId);
             
-            input.value = show.rating || '';
+            input.value = show.rating !== null && show.rating !== undefined ? show.rating : '';
             container.classList.remove('hidden');
             input.focus();
         }
