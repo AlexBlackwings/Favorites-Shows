@@ -54,6 +54,8 @@
         .delete-btn {
             opacity: 1;
             transition: transform 0.2s, background-color 0.2s;
+            cursor: pointer;
+            z-index: 10;
         }
         @media (min-width: 768px) {
             .delete-btn { opacity: 0; }
@@ -64,12 +66,8 @@
             background-color: rgba(220, 38, 38, 0.8) !important;
         }
 
-        .source-badge {
-            font-size: 9px;
-            padding: 2px 6px;
-            border-radius: 4px;
-            background: rgba(59, 130, 246, 0.2);
-            color: #60a5fa;
+        .card-poster {
+            cursor: pointer;
         }
     </style>
 </head>
@@ -87,7 +85,7 @@
         </div>
         
         <div class="relative">
-            <input type="text" id="searchInput" placeholder="Поиск (Ведьмак, Mandalorian...)..." 
+            <input type="text" id="searchInput" placeholder="Поиск сериалов..." 
                 class="w-full glass-input rounded-xl pl-4 pr-10 py-3 text-sm placeholder-gray-500 transition-all shadow-inner">
             
             <div id="searchLoader" class="absolute right-3 top-3 hidden">
@@ -124,10 +122,11 @@
         </div>
     </main>
 
-    <div id="detailModal" class="fixed inset-0 z-50 hidden flex items-end sm:items-center justify-center pointer-events-none">
-        <div class="modal-backdrop absolute inset-0 pointer-events-auto" onclick="closeModal()"></div>
+    <!-- Модальное окно -->
+    <div id="detailModal" class="fixed inset-0 z-50 hidden">
+        <div class="modal-backdrop absolute inset-0" onclick="closeModal()"></div>
         
-        <div class="bg-[#1a1a1a] w-full sm:w-[400px] sm:rounded-3xl rounded-t-3xl p-6 max-h-[85vh] overflow-y-auto slide-up pointer-events-auto border-t border-white/10 relative">
+        <div class="absolute bottom-0 left-0 right-0 bg-[#1a1a1a] rounded-t-3xl p-6 max-h-[85vh] overflow-y-auto slide-up border-t border-white/10">
             
             <div class="w-12 h-1.5 bg-gray-700 rounded-full mx-auto mb-6 opacity-50"></div>
             
@@ -135,62 +134,45 @@
                 <img id="modalPoster" class="w-28 h-40 rounded-xl bg-gray-800 flex-shrink-0 object-cover shadow-2xl border border-white/10" src="" alt="Poster">
                 <div class="flex-1 flex flex-col justify-center">
                     <h2 id="modalTitle" class="text-xl font-bold text-white leading-tight mb-1"></h2>
-                    <p id="modalStudio" class="text-sm text-gray-400 mb-4 line-clamp-2"></p>
+                    <p id="modalStudio" class="text-sm text-gray-400 mb-4"></p>
                     
-                    <div class="flex items-center gap-3 mt-auto">
-                        <div class="bg-green-500/10 text-green-400 px-3 py-1.5 rounded-lg text-sm font-bold border border-green-500/20 flex items-center gap-1">
-                            <span id="modalRatingDisplay">--</span> 
-                            <span class="text-xs opacity-60">/ 10</span>
+                    <div class="flex items-center gap-3">
+                        <div class="bg-green-500/10 text-green-400 px-3 py-1.5 rounded-lg text-sm font-bold border border-green-500/20">
+                            <span id="modalRatingDisplay">--</span> / 10
                         </div>
-                        <button onclick="enableEditRating()" class="text-xs text-gray-400 hover:text-white underline decoration-gray-600 underline-offset-2">Оценить</button>
+                        <button onclick="enableEditRating()" class="text-xs text-gray-400 hover:text-white underline">Оценить</button>
                     </div>
                 </div>
             </div>
 
             <div id="ratingInputContainer" class="mb-6 hidden bg-white/5 p-4 rounded-xl border border-white/5">
-                <label class="block text-xs text-gray-400 mb-2 font-medium">Ваша оценка</label>
+                <label class="block text-xs text-gray-400 mb-2">Ваша оценка</label>
                 <div class="flex gap-2">
-                    <input type="number" id="ratingInput" step="0.1" min="0" max="10" class="glass-input w-full px-3 py-2 rounded-lg text-sm font-mono" placeholder="0.0 - 10.0">
-                    <button onclick="saveRating()" class="bg-green-600 hover:bg-green-500 text-white px-4 rounded-lg text-sm font-bold transition-colors">OK</button>
+                    <input type="number" id="ratingInput" step="0.1" min="0" max="10" class="glass-input w-full px-3 py-2 rounded-lg text-sm" placeholder="0.0 - 10.0">
+                    <button onclick="saveRating()" class="bg-green-600 text-white px-4 rounded-lg text-sm font-bold">OK</button>
                 </div>
             </div>
 
-            <div class="mb-24 sm:mb-6">
+            <div class="mb-24">
                 <label class="block text-sm font-medium text-gray-300 mb-2">Ваши впечатления</label>
-                <textarea id="impressionsInput" rows="6" class="w-full glass-input rounded-xl p-4 text-sm resize-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="Напишите рецензию..."></textarea>
+                <textarea id="impressionsInput" rows="6" class="w-full glass-input rounded-xl p-4 text-sm resize-none" placeholder="Напишите рецензию..."></textarea>
             </div>
 
-            <div class="flex gap-3 mt-6 sticky bottom-0 bg-[#1a1a1a] pt-4 border-t border-white/5">
-                <button onclick="saveImpressions()" class="flex-1 bg-white text-black py-3.5 rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors">
-                    Сохранить
-                </button>
-                <button onclick="closeModal()" class="flex-1 bg-gray-800 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-gray-700 transition-colors">
-                    Закрыть
-                </button>
+            <div class="flex gap-3">
+                <button onclick="saveImpressions()" class="flex-1 bg-white text-black py-3 rounded-xl font-bold text-sm">Сохранить</button>
+                <button onclick="closeModal()" class="flex-1 bg-gray-800 text-white py-3 rounded-xl font-bold text-sm">Закрыть</button>
             </div>
         </div>
     </div>
 
     <script>
         // ============================================
-        // 📺 БЕСПЛАТНЫЕ API (без ключей)
-        // ============================================
-        // TVMaze - полностью бесплатный, без ключа
-        // OMDb - бесплатный тариф (1000 запросов/день)
+        // БЕСПЛАТНЫЕ API (без ключей)
         // ============================================
         const TVMAZE_BASE_URL = 'https://api.tvmaze.com';
         const OMDB_BASE_URL = 'https://www.omdbapi.com';
 
-        // Словарь транслитерации для поиска
-        const TRANSLITERATION = {
-            'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
-            'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
-            'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
-            'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch',
-            'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
-        };
-
-        // Популярные сериалы для fallback (русское → английское)
+        // Словарь переводов для популярных сериалов
         const SHOW_TRANSLATIONS = {
             'ведьмак': 'The Witcher',
             'мандалорец': 'The Mandalorian',
@@ -200,7 +182,6 @@
             'лучше звоните солу': 'Better Call Saul',
             'очень странные дела': 'Stranger Things',
             'игра престолов': 'Game of Thrones',
-            'дом дракона': 'House of the Dragon',
             'чернобыль': 'Chernobyl',
             'тьма': 'Dark',
             'офис': 'The Office',
@@ -211,7 +192,6 @@
             'эйфория': 'Euphoria',
             'острые козырьки': 'Peaky Blinders',
             'черное зеркало': 'Black Mirror',
-            'наследники': 'Succession',
             'пацаны': 'The Boys',
             'уэнсдей': 'Wednesday',
             'аркейн': 'Arcane',
@@ -220,46 +200,33 @@
             'корона': 'The Crown',
             'сексуальное воспитание': 'Sex Education',
             'бумажный дом': 'Money Heist',
-            'элита': 'Elite',
             'сверхъестественное': 'Supernatural',
             'клиник': 'Scrubs',
             'теория большого взрыва': 'The Big Bang Theory',
-            'как я встретил вашу маму': 'How I Met Your Mother',
             'бруклин 99': 'Brooklyn Nine-Nine',
             'ход мертвецов': 'The Walking Dead',
-            'lost': 'Lost',
-            'остаться в живых': 'Lost',
             'доктор кто': 'Doctor Who',
             'секретные материалы': 'The X-Files',
             'звездный путь': 'Star Trek',
-            'звездные войны': 'Star Wars',
             'видоизмененный углерод': 'Altered Carbon',
-            'любовь смерть и роботы': 'Love, Death & Robots',
             'рассказ служанки': 'The Handmaid\'s Tale',
-            'маньяк': 'Maniac',
             'мир дикого запада': 'Westworld',
             'настоящий детектив': 'True Detective',
             'фарго': 'Fargo',
             'клан сопрано': 'The Sopranos',
             'прослушка': 'The Wire',
             'карточный домик': 'House of Cards',
-            'оранжевый хит': 'Orange Is the New Black',
             'великая': 'The Great',
             'благие знамения': 'Good Omens',
-            'после жизни': 'After Life',
             'виктория': 'Victoria',
             'аббатство даунтон': 'Downton Abbey',
             'шрэм': 'Shameless',
             'табу': 'Taboo',
             'подпольная империя': 'Boardwalk Empire',
-            'дедвуд': 'Deadwood',
-            'рассказы из петли': 'Tales from the Loop',
             'американская история ужасов': 'American Horror Story',
             'американские боги': 'American Gods',
             'санкта': 'Shadow and Bone',
-            'тень и кость': 'Shadow and Bone',
             'кольцо власти': 'The Lord of the Rings: The Rings of Power',
-            'властелин колец': 'The Lord of the Rings: The Rings of Power',
             'обитель зла': 'Resident Evil',
             'стрела': 'Arrow',
             'флэш': 'The Flash',
@@ -267,21 +234,12 @@
             'титаны': 'Titans',
             'гавайи 50': 'Hawaii Five-0',
             'морская полиция': 'NCIS',
-            'ферма': 'The Ranch',
-            'дикий': 'The Wilds',
-            'ла casa de papel': 'Money Heist',
             'слово пацана': 'Boys Word',
             'метод': 'Method',
-            'содержанки': 'Keepers',
-            'топи': 'Topi',
-            'псих': 'Psychopath',
-            'колл-центр': 'Call Center',
-            'чикатило': 'Chikatilo',
             'триггер': 'Trigger',
             'мажор': 'Major',
             'физрук': 'Physruk',
             'универ': 'Univers',
-            'реальные пацаны': 'Real Guys',
             'интерны': 'Interns',
             'воронины': 'Voronins',
             'сваты': 'Svaty',
@@ -289,8 +247,49 @@
             'молодежка': 'Molodezhka',
             'кухня': 'Kitchen',
             'отель элеон': 'Hotel Eleon',
-            'ивановы-ивановы': 'Ivanovs',
-            'полицейский с рублевки': 'Policeman from Rublevka'
+            'полицейский с рублевки': 'Policeman from Rublevka',
+            'моя прекрасная няня': 'My Fair Nanny',
+            'не родись красивой': 'Dont Be Born Beautiful',
+            'бедная настя': 'Poor Nastya',
+            'каменская': 'Kamenskaya',
+            'бандитский петербург': 'Bandit Petersburg',
+            'улицы разбитых фонарей': 'Streets of Broken Lights',
+            'менты': 'Menty',
+            'глухарь': 'Glukhar',
+            'карпов': 'Karpov',
+            'мосгаз': 'Mosgaz',
+            'палач': 'Executioner',
+            'черная кошка': 'Black Cat',
+            'ленинград 46': 'Leningrad 46',
+            'оттепель': 'Thaw',
+            'софия': 'Sophia',
+            'екатерина': 'Catherine',
+            'григорий р': 'Grigory R',
+            'романовы': 'Romanovs',
+            'красная королева': 'Red Queen',
+            'золотая орда': 'Golden Horde',
+            'территория': 'Territory',
+            'контейнер': 'Container',
+            'последний министр': 'Last Minister',
+            'чумной доктор': 'Plague Doctor',
+            'нормальный только я': 'Normal Only Me',
+            'внук космонавта': 'Astronaut Grandson',
+            'кафе куба': 'Cafe Cuba',
+            'идеальная пара': 'Perfect Pair',
+            'давай разведемся': 'Lets Divorce',
+            'девки': 'Girls',
+            'бесы': 'Demons',
+            'пепел': 'Ash',
+            'штрафник': 'Penal Battalion',
+            'диверсант': 'Saboteur',
+            'смерш': 'Smersh',
+            'белая гвардия': 'White Guard',
+            'жизнь и судьба': 'Life and Fate',
+            'тихий дон': 'Quiet Don',
+            'мастер и маргарита': 'Master and Margarita',
+            'идиот': 'Idiot',
+            'анна каренина': 'Anna Karenina',
+            'война и мир': 'War and Peace'
         };
 
         // --- Состояние приложения ---
@@ -347,7 +346,7 @@
             }
         }
 
-        // --- Логика Поиска ---
+        // --- Настройка поиска ---
         function setupSearch() {
             const input = document.getElementById('searchInput');
             const resultsDiv = document.getElementById('searchResults');
@@ -378,9 +377,14 @@
 
         // Транслитерация русского в английский
         function transliterate(text) {
-            return text.toLowerCase().split('').map(char => 
-                TRANSLITERATION[char] || char
-            ).join('');
+            const map = {
+                'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
+                'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+                'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+                'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch',
+                'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
+            };
+            return text.toLowerCase().split('').map(char => map[char] || char).join('');
         }
 
         async function performSearch(query) {
@@ -395,11 +399,10 @@
                 let allResults = [];
                 const seenIds = new Set();
 
-                // Формируем список поисковых запросов
                 const searchTerms = [query];
                 const lowerQuery = query.toLowerCase();
 
-                // Добавляем перевод если есть в словаре
+                // Добавляем перевод из словаря
                 for (const [ru, en] of Object.entries(SHOW_TRANSLATIONS)) {
                     if (lowerQuery.includes(ru)) {
                         searchTerms.push(en);
@@ -412,37 +415,62 @@
                     searchTerms.push(transliterate(query));
                 }
 
-                // Поиск по всем источникам
+                // Поиск по TVMaze
                 for (const term of searchTerms) {
-                    // ПРИОРИТЕТ 1: TVMaze (полностью бесплатный, без ключа)
                     try {
-                        const tvmazeResults = await searchTVMaze(term);
-                        tvmazeResults.forEach(show => {
-                            if (!seenIds.has(show.id)) {
-                                seenIds.add(show.id);
-                                allResults.push({ ...show, source: 'TVMaze' });
-                            }
-                        });
+                        const response = await fetch(`${TVMAZE_BASE_URL}/search/shows?q=${encodeURIComponent(term)}`);
+                        const data = await response.json();
+                        
+                        if (data && data.length > 0) {
+                            data.forEach(item => {
+                                if (item.show && item.show.id && !seenIds.has(item.show.id)) {
+                                    seenIds.add(item.show.id);
+                                    
+                                    // Получаем постер - приоритет оригиналу, затем среднему
+                                    let posterUrl = 'https://via.placeholder.com/300x450?text=No+Image';
+                                    if (item.show.image) {
+                                        posterUrl = item.show.image.original || item.show.image.medium || posterUrl;
+                                    }
+                                    
+                                    allResults.push({
+                                        id: `tvmaze_${item.show.id}`,
+                                        title: item.show.name,
+                                        year: item.show.premiered ? item.show.premiered.substring(0, 4) : '',
+                                        posterUrl: posterUrl,
+                                        network: item.show.network ? item.show.network.name : ''
+                                    });
+                                }
+                            });
+                        }
                     } catch (e) {
-                        console.warn('TVMaze failed:', e);
+                        console.warn('TVMaze search failed:', e);
                     }
 
-                    // Если нашли достаточно результатов, не продолжаем
                     if (allResults.length >= 15) break;
                 }
 
-                // ПРИОРИТЕТ 2: OMDb (если TVMaze не дал результатов)
+                // Если мало результатов, пробуем OMDb
                 if (allResults.length < 5) {
                     try {
-                        const omdbResults = await searchOMDb(query);
-                        omdbResults.forEach(show => {
-                            if (!seenIds.has(show.id)) {
-                                seenIds.add(show.id);
-                                allResults.push({ ...show, source: 'OMDb' });
-                            }
-                        });
+                        const response = await fetch(`${OMDB_BASE_URL}?s=${encodeURIComponent(query)}&type=series`);
+                        const data = await response.json();
+                        
+                        if (data.Search && data.Search.length > 0) {
+                            data.Search.forEach((show, index) => {
+                                const uniqueId = `omdb_${show.imdbID || index}_${Date.now()}`;
+                                if (!seenIds.has(uniqueId) && show.Poster !== 'N/A') {
+                                    seenIds.add(uniqueId);
+                                    allResults.push({
+                                        id: uniqueId,
+                                        title: show.Title,
+                                        year: show.Year,
+                                        posterUrl: show.Poster
+                                    });
+                                }
+                            });
+                        }
                     } catch (e) {
-                        console.warn('OMDb failed:', e);
+                        console.warn('OMDb search failed:', e);
                     }
                 }
 
@@ -450,38 +478,26 @@
                 resultsDiv.innerHTML = '';
 
                 if (allResults.length === 0) {
-                    resultsDiv.innerHTML = `
-                        <div class="p-4 text-center text-sm text-gray-400">
-                            Ничего не найдено 😔<br>
-                            <span class="text-xs opacity-60">
-                                Попробуйте английское название или транслитерацию
-                            </span>
-                        </div>`;
+                    resultsDiv.innerHTML = '<div class="p-4 text-center text-sm text-gray-400">Ничего не найдено</div>';
                     return;
                 }
 
                 allResults.slice(0, 20).forEach(show => {
                     const exists = state.shows.find(s => s.id === show.id);
                     
-                    const posterUrl = show.posterUrl || 'https://via.placeholder.com/300x450?text=No+Image';
-                    const year = show.year ? `(${show.year})` : '';
-
                     const btnText = exists ? 'В списке' : 'Добавить';
-                    const btnClass = exists ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-900/20';
+                    const btnClass = exists ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-500';
                     const disabled = exists ? 'disabled' : '';
 
                     const item = document.createElement('div');
-                    item.className = 'flex items-center gap-3 p-3 border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer last:border-0';
+                    item.className = 'flex items-center gap-3 p-3 border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer';
                     item.innerHTML = `
-                        <img src="${posterUrl}" class="w-12 h-16 rounded bg-gray-800 object-cover shadow-md flex-shrink-0" onerror="this.src='https://via.placeholder.com/150x220?text=Error'">
+                        <img src="${show.posterUrl}" class="w-12 h-16 rounded bg-gray-800 object-cover shadow-md flex-shrink-0" onerror="this.src='https://via.placeholder.com/150x220?text=Error'">
                         <div class="flex-1 min-w-0">
-                            <div class="font-bold text-sm truncate text-white leading-tight mb-1">${show.title}</div>
-                            <div class="text-xs text-gray-400 truncate flex items-center gap-2">
-                                <span>${show.originalTitle || ''} ${year}</span>
-                                <span class="source-badge">${show.source}</span>
-                            </div>
+                            <div class="font-bold text-sm truncate text-white">${show.title}</div>
+                            <div class="text-xs text-gray-400">${show.year}</div>
                         </div>
-                        <button ${disabled} onclick="addShowFromApi('${show.id}', '${show.title.replace(/'/g, "\\'")}', '${(show.originalTitle || '').replace(/'/g, "\\'")}', '${posterUrl}')" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-all whitespace-nowrap ${btnClass}">
+                        <button ${disabled} onclick="addShow('${show.id}', '${show.title.replace(/'/g, "\\'")}', '${show.posterUrl}')" class="px-3 py-1.5 rounded-lg text-xs font-bold ${btnClass}">
                             ${btnText}
                         </button>
                     `;
@@ -491,72 +507,15 @@
             } catch (error) {
                 console.error('Search error:', error);
                 loader.classList.add('hidden');
-                resultsDiv.innerHTML = `
-                    <div class="p-4 text-center text-sm">
-                        <span class="text-red-400">Ошибка поиска</span><br>
-                        <span class="text-xs text-gray-500">${error.message}</span>
-                    </div>`;
+                resultsDiv.innerHTML = '<div class="p-4 text-center text-sm text-red-400">Ошибка поиска</div>';
             }
         }
 
-        // Поиск через TVMaze (бесплатно, без ключа)
-        async function searchTVMaze(query) {
-            const response = await fetch(
-                `${TVMAZE_BASE_URL}/search/shows?q=${encodeURIComponent(query)}`
-            );
-            
-            if (!response.ok) {
-                throw new Error(`TVMaze: ${response.status}`);
-            }
-            
-            const data = await response.json();
-            
-            if (!data || data.length === 0) return [];
-
-            return data
-                .filter(item => item.show && item.show.image && item.show.name)
-                .map(item => ({
-                    id: `tvmaze_${item.show.id}`,
-                    title: item.show.name,
-                    originalTitle: item.show.language !== 'en' ? item.show.name : (item.show.officialSite ? item.show.name : ''),
-                    year: item.show.premiered ? item.show.premiered.substring(0, 4) : '',
-                    posterUrl: item.show.image.medium || item.show.image.original,
-                    network: item.show.network ? item.show.network.name : '',
-                    rating: item.show.rating ? item.show.rating.average : null
-                }));
-        }
-
-        // Поиск через OMDb (бесплатный тариф)
-        async function searchOMDb(query) {
-            const response = await fetch(
-                `${OMDB_BASE_URL}?s=${encodeURIComponent(query)}&type=series`
-            );
-            
-            if (!response.ok) {
-                throw new Error(`OMDb: ${response.status}`);
-            }
-            
-            const data = await response.json();
-            
-            if (!data.Search) return [];
-
-            return data.Search
-                .filter(show => show.Poster !== 'N/A' && show.Title)
-                .map((show, index) => ({
-                    id: `omdb_${show.imdbID || index}_${Date.now()}`,
-                    title: show.Title,
-                    originalTitle: show.Title,
-                    year: show.Year,
-                    posterUrl: show.Poster
-                }));
-        }
-
-        function addShowFromApi(id, title, originalTitle, posterUrl) {
+        function addShow(id, title, posterUrl) {
             if (!state.shows.find(s => s.id === id)) {
                 state.shows.push({
                     id: id,
                     title: title,
-                    originalTitle: originalTitle,
                     posterUrl: posterUrl,
                     rating: null,
                     impressions: ''
@@ -571,11 +530,16 @@
             }
         }
 
-        function removeShow(e, id) {
-            e.stopPropagation();
+        // --- Удаление сериала ---
+        function removeShow(event, showId) {
+            // Останавливаем всплытие чтобы не открывалась модалка
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
             
             if(confirm('Удалить этот сериал из списка?')) {
-                state.shows = state.shows.filter(s => s.id !== id);
+                state.shows = state.shows.filter(s => s.id !== showId);
                 saveUserData();
                 if(window.Telegram && window.Telegram.WebApp.HapticFeedback) {
                     window.Telegram.WebApp.HapticFeedback.notificationOccurred('warning');
@@ -583,6 +547,7 @@
             }
         }
 
+        // --- Рендеринг списка ---
         function renderShowList() {
             const container = document.getElementById('showList');
             const emptyState = document.getElementById('emptyState');
@@ -598,55 +563,68 @@
 
             state.shows.forEach(show => {
                 const card = document.createElement('div');
-                card.className = 'card-container snap-center flex-shrink-0 w-36 bg-[#1a1a1a] rounded-2xl overflow-hidden shadow-lg border border-white/5 relative group transition-transform hover:scale-[1.03] active:scale-95 duration-200';
+                card.className = 'card-container snap-center flex-shrink-0 w-36 bg-[#1a1a1a] rounded-2xl overflow-hidden shadow-lg border border-white/5 relative';
                 
-                const ratingDisplay = show.rating 
-                    ? `<span class="text-yellow-400 font-bold text-sm">${show.rating}</span>` 
-                    : '<span class="text-gray-600 font-bold text-sm">--</span>';
+                const ratingDisplay = show.rating !== null && show.rating !== undefined
+                    ? `<span class="text-yellow-400 font-bold">${show.rating}</span>` 
+                    : '<span class="text-gray-600 font-bold">--</span>';
 
-                card.innerHTML = `
-                    <button onclick="removeShow(event, ${show.id})" class="delete-btn absolute top-2 right-2 z-10 bg-black/60 hover:bg-red-600 text-white rounded-full p-1.5 backdrop-blur-sm transition-colors border border-white/10">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+                // Создаем элементы по отдельности для правильной обработки событий
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-btn absolute top-2 right-2 bg-black/60 hover:bg-red-600 text-white rounded-full p-1.5 backdrop-blur-sm border border-white/10';
+                deleteBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                `;
+                deleteBtn.onclick = (e) => removeShow(e, show.id);
 
-                    <div class="h-52 bg-gray-800 relative overflow-hidden" onclick="openModal(${show.id})">
-                        <img src="${show.posterUrl}" class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" alt="${show.title}" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
-                        <div class="absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent"></div>
-                        
-                        <div class="absolute bottom-3 right-3 bg-black/70 backdrop-blur-md px-2 py-1 rounded-md border border-white/10 shadow-lg">
-                            ${ratingDisplay}
-                        </div>
-                    </div>
-                    <div class="p-3">
-                        <h3 class="font-bold text-sm text-white leading-tight mb-1 line-clamp-2 h-10" title="${show.title}">${show.title}</h3>
-                        <p class="text-[10px] text-gray-500 uppercase tracking-wider truncate mb-3">${show.originalTitle !== show.title ? show.originalTitle : 'Сериал'}</p>
-                        <button onclick="openModal(${show.id})" class="w-full py-2 bg-white/5 hover:bg-white/10 text-[10px] font-bold uppercase tracking-wide rounded-lg transition-colors text-center text-gray-300">
-                            Открыть
-                        </button>
+                const posterContainer = document.createElement('div');
+                posterContainer.className = 'h-52 bg-gray-800 relative overflow-hidden card-poster';
+                posterContainer.onclick = () => openModal(show.id);
+                posterContainer.innerHTML = `
+                    <img src="${show.posterUrl}" class="w-full h-full object-cover opacity-90" alt="${show.title}" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
+                    <div class="absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent"></div>
+                    <div class="absolute bottom-3 right-3 bg-black/70 backdrop-blur-md px-2 py-1 rounded-md border border-white/10">
+                        ${ratingDisplay}
                     </div>
                 `;
+
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'p-3';
+                infoDiv.innerHTML = `
+                    <h3 class="font-bold text-sm text-white leading-tight mb-1 line-clamp-2 h-10">${show.title}</h3>
+                    <button class="w-full py-2 bg-white/5 hover:bg-white/10 text-xs font-bold rounded-lg transition-colors text-center text-gray-300">
+                        Открыть
+                    </button>
+                `;
+                infoDiv.querySelector('button').onclick = () => openModal(show.id);
+
+                card.appendChild(deleteBtn);
+                card.appendChild(posterContainer);
+                card.appendChild(infoDiv);
                 container.appendChild(card);
             });
         }
 
-        function openModal(id) {
-            const show = state.shows.find(s => s.id === id);
-            if (!show) return;
+        // --- Модальное окно ---
+        function openModal(showId) {
+            const show = state.shows.find(s => s.id === showId);
+            if (!show) {
+                console.error('Show not found:', showId);
+                return;
+            }
 
-            state.currentModalShowId = id;
+            state.currentModalShowId = showId;
 
             document.getElementById('modalPoster').src = show.posterUrl;
-            document.getElementById('modalTitle').innerText = show.title;
-            document.getElementById('modalStudio').innerText = show.originalTitle !== show.title ? show.originalTitle : 'Оригинальное название';
-            document.getElementById('modalRatingDisplay').innerText = show.rating ? show.rating : '--';
+            document.getElementById('modalTitle').textContent = show.title;
+            document.getElementById('modalStudio').textContent = '';
+            document.getElementById('modalRatingDisplay').textContent = show.rating !== null && show.rating !== undefined ? show.rating : '--';
             document.getElementById('impressionsInput').value = show.impressions || '';
             
             document.getElementById('ratingInputContainer').classList.add('hidden');
-            
-            const modal = document.getElementById('detailModal');
-            modal.classList.remove('hidden');
+            document.getElementById('detailModal').classList.remove('hidden');
             
             if(window.Telegram && window.Telegram.WebApp.HapticFeedback) {
                 window.Telegram.WebApp.HapticFeedback.selectionChanged();
@@ -663,7 +641,7 @@
             const input = document.getElementById('ratingInput');
             const show = state.shows.find(s => s.id === state.currentModalShowId);
             
-            input.value = show.rating || '';
+            input.value = show.rating !== null && show.rating !== undefined ? show.rating : '';
             container.classList.remove('hidden');
             input.focus();
         }
@@ -682,7 +660,7 @@
             if (showIndex !== -1) {
                 state.shows[showIndex].rating = val;
                 saveUserData();
-                document.getElementById('modalRatingDisplay').innerText = val;
+                document.getElementById('modalRatingDisplay').textContent = val;
                 document.getElementById('ratingInputContainer').classList.add('hidden');
                 
                 if(window.Telegram && window.Telegram.WebApp.HapticFeedback) {
@@ -723,3 +701,4 @@
     </script>
 </body>
 </html>
+
