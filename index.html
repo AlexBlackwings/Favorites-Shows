@@ -69,6 +69,25 @@
         .card-poster {
             cursor: pointer;
         }
+
+        /* Оптимизация изображений */
+        .poster-img {
+            transition: opacity 0.3s;
+        }
+        .poster-img.loading {
+            opacity: 0.5;
+        }
+        .poster-img.loaded {
+            opacity: 1;
+        }
+
+        /* Градиент-заглушка пока грузится */
+        .poster-placeholder {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
     </style>
 </head>
 <body class="h-screen flex flex-col">
@@ -122,7 +141,6 @@
         </div>
     </main>
 
-    <!-- Модальное окно -->
     <div id="detailModal" class="fixed inset-0 z-50 hidden">
         <div class="modal-backdrop absolute inset-0" onclick="closeModal()"></div>
         
@@ -167,12 +185,92 @@
 
     <script>
         // ============================================
-        // БЕСПЛАТНЫЕ API (без ключей)
+        // 🚀 ОПТИМИЗИРОВАННЫЕ ИСТОЧНИКИ ПОСТЕРОВ
+        // ============================================
+        // Приоритет: 1) ImageTMDB (быстрый CDN) 
+        //            2) OMDb (разные источники)
+        //            3) TVMaze (медленный, запасной)
         // ============================================
         const TVMAZE_BASE_URL = 'https://api.tvmaze.com';
         const OMDB_BASE_URL = 'https://www.omdbapi.com';
+        
+        // Быстрый CDN для постеров (используем TMDB изображения через прокси)
+        const IMAGE_CDN_BASE = 'https://image.tmdb.org/t/p/w342';
 
-        // Словарь переводов для популярных сериалов
+        // Кэш изображений в localStorage
+        const IMAGE_CACHE_KEY = 'tma_poster_cache';
+        
+        // Словарь с TMDB ID для популярных сериалов (для быстрых постеров)
+        const POPULAR_SHOWS_TMDB = {
+            'the witcher': '71912',
+            'the mandalorian': '82856',
+            'sons of anarchy': '1409',
+            'she-hulk': '92782',
+            'breaking bad': '1396',
+            'better call saul': '60059',
+            'stranger things': '66732',
+            'game of thrones': '1399',
+            'chernobyl': '87108',
+            'dark': '70523',
+            'the office': '2316',
+            'friends': '1668',
+            'sherlock': '1988',
+            'rick and morty': '60624',
+            'squid game': '93405',
+            'euphoria': '85552',
+            'peaky blinders': '60574',
+            'black mirror': '42009',
+            'the boys': '76479',
+            'wednesday': '119051',
+            'arcane': '94605',
+            'the umbrella academy': '75006',
+            'ozark': '69740',
+            'the crown': '65494',
+            'sex education': '81356',
+            'money heist': '71446',
+            'supernatural': '1622',
+            'scrubs': '4556',
+            'the big bang theory': '1418',
+            'brooklyn nine-nine': '48891',
+            'the walking dead': '1402',
+            'doctor who': '57243',
+            'the x-files': '4087',
+            'star trek': '65334',
+            'altered carbon': '68421',
+            'the handmaid\'s tale': '69478',
+            'westworld': '63247',
+            'true detective': '46648',
+            'fargo': '60622',
+            'the sopranos': '1398',
+            'the wire': '1438',
+            'house of cards': '1425',
+            'the great': '87739',
+            'good omens': '82506',
+            'victoria': '66788',
+            'downton abbey': '12650',
+            'shameless': '34307',
+            'taboo': '65334',
+            'boardwalk empire': '1434',
+            'american horror story': '1413',
+            'american gods': '63351',
+            'shadow and bone': '85720',
+            'the lord of the rings: the rings of power': '84773',
+            'resident evil': '90328',
+            'arrow': '1412',
+            'the flash': '60735',
+            'supergirl': '62633',
+            'titans': '75820',
+            'hawaii five-0': '32806',
+            'ncis': '4614',
+            'the kitchen': '58494',
+            'interns': '62016',
+            'physruk': '62891',
+            'major': '76669',
+            'trigger': '95057',
+            'boys word': '213714'
+        };
+
+        // Словарь переводов
         const SHOW_TRANSLATIONS = {
             'ведьмак': 'The Witcher',
             'мандалорец': 'The Mandalorian',
@@ -299,6 +397,23 @@
             currentModalShowId: null
         };
 
+        // --- Кэш изображений ---
+        function getImageCache() {
+            try {
+                return JSON.parse(localStorage.getItem(IMAGE_CACHE_KEY) || '{}');
+            } catch {
+                return {};
+            }
+        }
+
+        function saveImageCache(cache) {
+            try {
+                localStorage.setItem(IMAGE_CACHE_KEY, JSON.stringify(cache));
+            } catch {
+                // Игнорируем ошибки кэша
+            }
+        }
+
         // --- Инициализация ---
         document.addEventListener('DOMContentLoaded', () => {
             if (window.Telegram && window.Telegram.WebApp) {
@@ -375,7 +490,7 @@
             });
         }
 
-        // Транслитерация русского в английский
+        // Транслитерация
         function transliterate(text) {
             const map = {
                 'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
@@ -385,6 +500,36 @@
                 'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
             };
             return text.toLowerCase().split('').map(char => map[char] || char).join('');
+        }
+
+        // Получение быстрого постера через TMDB CDN
+        function getFastPosterUrl(showName) {
+            const lowerName = showName.toLowerCase();
+            
+            // Проверяем словарь популярных шоу
+            for (const [key, tmdbId] of Object.entries(POPULAR_SHOWS_TMDB)) {
+                if (lowerName.includes(key)) {
+                    return `${IMAGE_CDN_BASE}${tmdbId}.jpg`;
+                }
+            }
+            
+            return null;
+        }
+
+        // Загрузка изображения с таймаутом
+        function loadImageWithTimeout(src, timeout = 5000) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(src);
+                img.onerror = () => reject(new Error('Failed to load'));
+                
+                const timer = setTimeout(() => {
+                    img.src = '';
+                    reject(new Error('Timeout'));
+                }, timeout);
+                
+                img.src = src;
+            });
         }
 
         async function performSearch(query) {
@@ -426,10 +571,17 @@
                                 if (item.show && item.show.id && !seenIds.has(item.show.id)) {
                                     seenIds.add(item.show.id);
                                     
-                                    // Получаем постер - приоритет оригиналу, затем среднему
-                                    let posterUrl = 'https://via.placeholder.com/300x450?text=No+Image';
-                                    if (item.show.image) {
-                                        posterUrl = item.show.image.original || item.show.image.medium || posterUrl;
+                                    // ПРИОРИТЕТ 1: Быстрый CDN постер
+                                    let posterUrl = getFastPosterUrl(item.show.name);
+                                    
+                                    // ПРИОРИТЕТ 2: TVMaze medium (быстрее чем original)
+                                    if (!posterUrl && item.show.image && item.show.image.medium) {
+                                        posterUrl = item.show.image.medium;
+                                    }
+                                    
+                                    // ПРИОРИТЕТ 3: Заглушка
+                                    if (!posterUrl) {
+                                        posterUrl = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="450"%3E%3Crect fill="%231a1a2e" width="300" height="450"/%3E%3Ctext fill="%23333" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-size="20"%3ENo Image%3C/text%3E%3C/svg%3E';
                                     }
                                     
                                     allResults.push({
@@ -458,13 +610,17 @@
                         if (data.Search && data.Search.length > 0) {
                             data.Search.forEach((show, index) => {
                                 const uniqueId = `omdb_${show.imdbID || index}_${Date.now()}`;
-                                if (!seenIds.has(uniqueId) && show.Poster !== 'N/A') {
+                                if (!seenIds.has(uniqueId) && show.Poster && show.Poster !== 'N/A') {
                                     seenIds.add(uniqueId);
+                                    
+                                    // Проверяем быстрый CDN
+                                    let posterUrl = getFastPosterUrl(show.Title) || show.Poster;
+                                    
                                     allResults.push({
                                         id: uniqueId,
                                         title: show.Title,
                                         year: show.Year,
-                                        posterUrl: show.Poster
+                                        posterUrl: posterUrl
                                     });
                                 }
                             });
@@ -492,7 +648,7 @@
                     const item = document.createElement('div');
                     item.className = 'flex items-center gap-3 p-3 border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer';
                     item.innerHTML = `
-                        <img src="${show.posterUrl}" class="w-12 h-16 rounded bg-gray-800 object-cover shadow-md flex-shrink-0" onerror="this.src='https://via.placeholder.com/150x220?text=Error'">
+                        <img src="${show.posterUrl}" class="w-12 h-16 rounded bg-gray-800 object-cover shadow-md flex-shrink-0" loading="lazy">
                         <div class="flex-1 min-w-0">
                             <div class="font-bold text-sm truncate text-white">${show.title}</div>
                             <div class="text-xs text-gray-400">${show.year}</div>
@@ -532,7 +688,6 @@
 
         // --- Удаление сериала ---
         function removeShow(event, showId) {
-            // Останавливаем всплытие чтобы не открывалась модалка
             if (event) {
                 event.preventDefault();
                 event.stopPropagation();
@@ -569,7 +724,17 @@
                     ? `<span class="text-yellow-400 font-bold">${show.rating}</span>` 
                     : '<span class="text-gray-600 font-bold">--</span>';
 
-                // Создаем элементы по отдельности для правильной обработки событий
+                // Проверяем быстрый CDN для существующих шоу
+                let displayPosterUrl = show.posterUrl;
+                const fastPoster = getFastPosterUrl(show.title);
+                if (fastPoster) {
+                    displayPosterUrl = fastPoster;
+                    // Обновляем в хранилище
+                    show.posterUrl = fastPoster;
+                    saveUserData();
+                }
+
+                // Кнопка удаления
                 const deleteBtn = document.createElement('button');
                 deleteBtn.className = 'delete-btn absolute top-2 right-2 bg-black/60 hover:bg-red-600 text-white rounded-full p-1.5 backdrop-blur-sm border border-white/10';
                 deleteBtn.innerHTML = `
@@ -579,17 +744,39 @@
                 `;
                 deleteBtn.onclick = (e) => removeShow(e, show.id);
 
+                // Постер с lazy loading
                 const posterContainer = document.createElement('div');
-                posterContainer.className = 'h-52 bg-gray-800 relative overflow-hidden card-poster';
+                posterContainer.className = 'h-52 bg-gray-800 relative overflow-hidden card-poster poster-placeholder';
                 posterContainer.onclick = () => openModal(show.id);
-                posterContainer.innerHTML = `
-                    <img src="${show.posterUrl}" class="w-full h-full object-cover opacity-90" alt="${show.title}" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
-                    <div class="absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent"></div>
-                    <div class="absolute bottom-3 right-3 bg-black/70 backdrop-blur-md px-2 py-1 rounded-md border border-white/10">
-                        ${ratingDisplay}
-                    </div>
-                `;
+                
+                const img = document.createElement('img');
+                img.className = 'poster-img absolute inset-0 w-full h-full object-cover';
+                img.src = displayPosterUrl;
+                img.loading = 'lazy';
+                img.alt = show.title;
+                img.onerror = function() {
+                    this.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="450"%3E%3Crect fill="%231a1a2e" width="300" height="450"/%3E%3Ctext fill="%23333" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-size="16"%3ENo Image%3C/text%3E%3C/svg%3E';
+                    this.classList.remove('loading');
+                    this.classList.add('loaded');
+                };
+                img.onload = function() {
+                    this.classList.remove('loading');
+                    this.classList.add('loaded');
+                    posterContainer.classList.remove('poster-placeholder');
+                };
+                
+                const gradient = document.createElement('div');
+                gradient.className = 'absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent';
+                
+                const ratingBadge = document.createElement('div');
+                ratingBadge.className = 'absolute bottom-3 right-3 bg-black/70 backdrop-blur-md px-2 py-1 rounded-md border border-white/10';
+                ratingBadge.innerHTML = ratingDisplay;
 
+                posterContainer.appendChild(img);
+                posterContainer.appendChild(gradient);
+                posterContainer.appendChild(ratingBadge);
+
+                // Инфо блок
                 const infoDiv = document.createElement('div');
                 infoDiv.className = 'p-3';
                 infoDiv.innerHTML = `
@@ -617,7 +804,14 @@
 
             state.currentModalShowId = showId;
 
-            document.getElementById('modalPoster').src = show.posterUrl;
+            // Проверяем быстрый CDN
+            let posterUrl = show.posterUrl;
+            const fastPoster = getFastPosterUrl(show.title);
+            if (fastPoster) {
+                posterUrl = fastPoster;
+            }
+
+            document.getElementById('modalPoster').src = posterUrl;
             document.getElementById('modalTitle').textContent = show.title;
             document.getElementById('modalStudio').textContent = '';
             document.getElementById('modalRatingDisplay').textContent = show.rating !== null && show.rating !== undefined ? show.rating : '--';
@@ -701,4 +895,3 @@
     </script>
 </body>
 </html>
-
