@@ -69,11 +69,11 @@
             color: #60a5fa;
         }
 
-        /* Постер в списке */
+        /* Постер в списке - УВЕЛИЧЕН В 2 РАЗА */
         .list-poster {
-            width: 50px;
-            height: 70px;
-            border-radius: 8px;
+            width: 100px;
+            height: 140px;
+            border-radius: 12px;
             object-fit: cover;
             flex-shrink: 0;
         }
@@ -132,6 +132,29 @@
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
+
+        /* Мета-информация (годы, серии) */
+        .meta-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 6px;
+        }
+        .meta-tag {
+            font-size: 11px;
+            color: #9ca3af;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 3px 8px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .meta-tag svg {
+            width: 12px;
+            height: 12px;
+            opacity: 0.7;
+        }
     </style>
 </head>
 <body class="h-screen flex flex-col">
@@ -174,7 +197,7 @@
         </div>
 
         <!-- Список сериалов (вертикальный) -->
-        <div id="showList" class="px-4 py-4 space-y-2">
+        <div id="showList" class="px-4 py-4 space-y-3">
         </div>
 
         <!-- Блок профиля -->
@@ -643,6 +666,8 @@
                         id: `tvmaze_${item.show.id}`,
                         title: item.show.name,
                         year: item.show.premiered ? item.show.premiered.substring(0, 4) : '',
+                        endYear: item.show.ended ? item.show.ended.substring(0, 4) : '',
+                        episodes: item.show.episodes || 0,
                         posterUrl: posterUrl,
                         network: item.show.network ? item.show.network.name : '',
                         rating: item.show.rating ? item.show.rating.average : null
@@ -665,6 +690,8 @@
                     id: `omdb_${show.imdbID || index}_${Date.now()}`,
                     title: show.Title,
                     year: show.Year,
+                    endYear: '',
+                    episodes: 0,
                     posterUrl: show.Poster && show.Poster !== 'N/A' ? show.Poster : 'https://via.placeholder.com/300x450?text=No+Image'
                 }));
         }
@@ -676,7 +703,10 @@
                     title: title,
                     posterUrl: optimizeImageUrl(posterUrl),
                     rating: null,
-                    impressions: ''
+                    impressions: '',
+                    year: '',
+                    endYear: '',
+                    episodes: 0
                 });
                 saveUserData();
                 document.getElementById('searchInput').value = '';
@@ -747,7 +777,7 @@
 
             sortedShows.forEach(show => {
                 const item = document.createElement('div');
-                item.className = 'list-item bg-[#1a1a1a] rounded-xl overflow-hidden border border-white/5 flex items-center gap-3 p-3 hover:bg-white/5 transition-colors adding';
+                item.className = 'list-item bg-[#1a1a1a] rounded-xl overflow-hidden border border-white/5 flex items-stretch gap-4 p-3 hover:bg-white/5 transition-colors adding';
                 item.setAttribute('data-show-id', show.id);
                 
                 const ratingClass = getRatingClass(show.rating);
@@ -757,34 +787,54 @@
 
                 const safePosterUrl = optimizeImageUrl(show.posterUrl);
 
+                // Формируем мета-информацию
+                const yearRange = show.year && show.endYear && show.endYear !== show.year 
+                    ? `${show.year} – ${show.endYear}` 
+                    : (show.year || '—');
+                const episodesText = show.episodes && show.episodes > 0 
+                    ? `${show.episodes} серий` 
+                    : '';
+
                 item.innerHTML = `
-                    <!-- Постер (слева) -->
-                    <div class="poster-container w-[50px] h-[70px] rounded-lg flex-shrink-0 overflow-hidden" onclick="openModal('${show.id}')">
-                        <img src="${safePosterUrl}" class="w-full h-full object-cover poster-img" loading="lazy" onload="this.classList.add('loaded'); this.classList.remove('loading');" onerror="this.src='https://via.placeholder.com/150x220?text=No+Image'; this.classList.add('loaded');">
+                    <!-- Постер (слева, увеличенный) -->
+                    <div class="poster-container w-[100px] h-[140px] rounded-xl flex-shrink-0 overflow-hidden cursor-pointer" onclick="openModal('${show.id}')">
+                        <img src="${safePosterUrl}" class="w-full h-full object-cover poster-img" loading="lazy" onload="this.classList.add('loaded'); this.classList.remove('loading');" onerror="this.src='https://via.placeholder.com/200x280?text=No+Image'; this.classList.add('loaded');">
                     </div>
                     
-                    <!-- Название (центр) -->
-                    <div class="flex-1 min-w-0" onclick="openModal('${show.id}')">
-                        <h3 class="font-bold text-sm text-white leading-tight mb-1 truncate" title="${show.title}">${show.title}</h3>
-                        <p class="text-[10px] text-gray-500 uppercase tracking-wider">Сериал</p>
+                    <!-- Информация (справа от постера) -->
+                    <div class="flex-1 flex flex-col justify-between py-1 cursor-pointer" onclick="openModal('${show.id}')">
+                        <div>
+                            <h3 class="font-bold text-base text-white leading-tight mb-2 line-clamp-2" title="${show.title}">${show.title}</h3>
+                            
+                            <!-- Мета-информация: годы и серии -->
+                            <div class="meta-info">
+                                ${yearRange ? `<span class="meta-tag">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                    ${yearRange}
+                                </span>` : ''}
+                                ${episodesText ? `<span class="meta-tag">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path></svg>
+                                    ${episodesText}
+                                </span>` : ''}
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center gap-2 mt-3">
+                            <span class="text-[10px] text-gray-500 uppercase tracking-wider">Нажмите для деталей</span>
+                        </div>
                     </div>
                     
-                    <!-- Рейтинг (справа) -->
-                    <div class="flex flex-col items-end gap-1">
+                    <!-- Рейтинг и удаление (справа) -->
+                    <div class="flex flex-col items-end gap-2 justify-between py-1">
                         <div class="rating-badge ${ratingClass}">
                             ${ratingDisplay}
                         </div>
-                        <button onclick="openModal('${show.id}')" class="text-[10px] text-gray-400 hover:text-white transition-colors">
-                            Подробнее
+                        <button onclick="removeShow(event, '${show.id}')" class="delete-btn bg-black/60 hover:bg-red-600 text-white rounded-full p-2 backdrop-blur-sm transition-colors border border-white/10 flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
                         </button>
                     </div>
-                    
-                    <!-- Кнопка удаления -->
-                    <button onclick="removeShow(event, '${show.id}')" class="delete-btn bg-black/60 hover:bg-red-600 text-white rounded-full p-1.5 backdrop-blur-sm transition-colors border border-white/10 flex-shrink-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
                 `;
                 container.appendChild(item);
             });
