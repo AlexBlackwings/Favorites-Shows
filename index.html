@@ -63,9 +63,23 @@
             transform: scale(0.9);
             background-color: rgba(220, 38, 38, 0.8) !important;
         }
+
+        .api-warning {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
     </style>
 </head>
 <body class="h-screen flex flex-col">
+
+    <!-- WARNING BANNER - Remove after getting your API key -->
+    <div id="apiWarning" class="api-warning p-3 text-center text-sm font-bold text-white">
+        ⚠️ ВНИМАНИЕ: Получите бесплатный API ключ на themoviedb.org (инструкция внутри)
+    </div>
 
     <header class="p-4 sticky top-0 z-20 bg-[#0f0f0f]/95 backdrop-blur-md border-b border-white/5 shadow-lg">
         <div class="flex items-center justify-between mb-3">
@@ -164,12 +178,19 @@
     </div>
 
     <script>
-        // --- TMDB API Configuration ---
-        // Публичный API ключ для демонстрационных целей
-        // Для продакшена получите свой ключ на https://www.themoviedb.org/settings/api
-        const TMDB_API_KEY = '2dca580c2a14b55200e784d157207b4d';
+        // ============================================
+        // 🎬 ВАЖНО: ПОЛУЧИТЕ СВОЙ API КЛЮЧ
+        // ============================================
+        // 1. Зарегистрируйтесь на https://www.themoviedb.org/
+        // 2. Перейдите в Settings → API → Create
+        // 3. Вставьте ключ ниже вместо 'YOUR_API_KEY_HERE'
+        // ============================================
+        const TMDB_API_KEY = 'YOUR_API_KEY_HERE'; // ← ЗАМЕНИТЕ ЭТО
         const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
         const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
+
+        // Резервный API (OMDb) - работает без ключа для базового поиска
+        const OMDB_BASE_URL = 'https://www.omdbapi.com';
 
         // --- Состояние приложения ---
         let state = {
@@ -180,6 +201,13 @@
 
         // --- Инициализация ---
         document.addEventListener('DOMContentLoaded', () => {
+            // Проверка API ключа
+            if (TMDB_API_KEY === 'YOUR_API_KEY_HERE' || TMDB_API_KEY.length < 10) {
+                document.getElementById('apiWarning').style.display = 'block';
+            } else {
+                document.getElementById('apiWarning').style.display = 'none';
+            }
+
             if (window.Telegram && window.Telegram.WebApp) {
                 window.Telegram.WebApp.ready();
                 window.Telegram.WebApp.expand();
@@ -263,44 +291,51 @@
             resultsDiv.classList.remove('hidden');
 
             try {
-                // TMDB API поиск с поддержкой русского языка
-                // language=ru-RU позволяет искать по русским названиям
-                const response = await fetch(
-                    `${TMDB_BASE_URL}/search/tv?api_key=${TMDB_API_KEY}&language=ru-RU&query=${encodeURIComponent(query)}&page=1&include_adult=false`
-                );
-                const data = await response.json();
-                
+                let results = [];
+
+                // ПРИОРИТЕТ 1: TMDB API (основной)
+                if (TMDB_API_KEY !== 'YOUR_API_KEY_HERE' && TMDB_API_KEY.length >= 10) {
+                    try {
+                        results = await searchTMDB(query);
+                    } catch (tmdbError) {
+                        console.warn('TMDB failed, trying OMDb:', tmdbError);
+                    }
+                }
+
+                // ПРИОРИТЕТ 2: OMDb API (резервный)
+                if (results.length === 0) {
+                    try {
+                        results = await searchOMDb(query);
+                    } catch (omdbError) {
+                        console.warn('OMDb also failed:', omdbError);
+                    }
+                }
+
                 loader.classList.add('hidden');
                 resultsDiv.innerHTML = '';
 
-                if (!data.results || data.results.length === 0) {
-                    resultsDiv.innerHTML = '<div class="p-4 text-center text-sm text-gray-400">Ничего не найдено 😔<br><span class="text-xs opacity-60">Попробуйте другое название</span></div>';
+                if (results.length === 0) {
+                    resultsDiv.innerHTML = `
+                        <div class="p-4 text-center text-sm text-gray-400">
+                            Ничего не найдено 😔<br>
+                            <span class="text-xs opacity-60">Попробуйте английское название</span>
+                        </div>`;
                     return;
                 }
 
-                // Фильтруем только сериалы с постерами
-                const validShows = data.results.filter(show => 
-                    show.poster_path && show.name
-                );
+                // Убираем дубликаты по ID
+                const seenIds = new Set();
+                const uniqueResults = results.filter(show => {
+                    if (seenIds.has(show.id)) return false;
+                    seenIds.add(show.id);
+                    return true;
+                });
 
-                if (validShows.length === 0) {
-                    resultsDiv.innerHTML = '<div class="p-4 text-center text-sm text-gray-400">Найдено без постеров</div>';
-                    return;
-                }
-
-                validShows.slice(0, 20).forEach(show => {
-                    const uniqueId = show.id;
-                    const exists = state.shows.find(s => s.id === uniqueId);
+                uniqueResults.slice(0, 20).forEach(show => {
+                    const exists = state.shows.find(s => s.id === show.id);
                     
-                    // Определяем название (русское или оригинальное)
-                    const title = show.name || show.original_name;
-                    const originalTitle = show.original_name;
-                    const studio = show.origin_country ? show.origin_country.join(', ') : 'Unknown';
-                    
-                    // Формируем URL постера
-                    const posterUrl = show.poster_path 
-                        ? `${TMDB_IMAGE_BASE}${show.poster_path}`
-                        : 'https://via.placeholder.com/300x450?text=No+Image';
+                    const posterUrl = show.posterUrl || 'https://via.placeholder.com/300x450?text=No+Image';
+                    const year = show.year ? `(${show.year})` : '';
 
                     const btnText = exists ? 'В списке' : 'Добавить';
                     const btnClass = exists ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-900/20';
@@ -311,20 +346,75 @@
                     item.innerHTML = `
                         <img src="${posterUrl}" class="w-12 h-16 rounded bg-gray-800 object-cover shadow-md flex-shrink-0" onerror="this.src='https://via.placeholder.com/150x220?text=Error'">
                         <div class="flex-1 min-w-0">
-                            <div class="font-bold text-sm truncate text-white leading-tight mb-1">${title}</div>
-                            <div class="text-xs text-gray-400 truncate">${originalTitle !== title ? originalTitle : studio} • ${show.first_air_date ? show.first_air_date.substring(0, 4) : '?'}</div>
+                            <div class="font-bold text-sm truncate text-white leading-tight mb-1">${show.title}</div>
+                            <div class="text-xs text-gray-400 truncate">${show.originalTitle || ''} ${year}</div>
                         </div>
-                        <button ${disabled} onclick="addShowFromApi(${uniqueId}, '${title.replace(/'/g, "\\'")}', '${originalTitle.replace(/'/g, "\\'")}', '${posterUrl}')" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-all whitespace-nowrap ${btnClass}">
+                        <button ${disabled} onclick="addShowFromApi(${show.id}, '${show.title.replace(/'/g, "\\'")}', '${(show.originalTitle || '').replace(/'/g, "\\'")}', '${posterUrl}')" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-all whitespace-nowrap ${btnClass}">
                             ${btnText}
                         </button>
                     `;
                     resultsDiv.appendChild(item);
                 });
+
             } catch (error) {
-                console.error(error);
+                console.error('Search error:', error);
                 loader.classList.add('hidden');
-                resultsDiv.innerHTML = '<div class="p-3 text-sm text-red-400 text-center">Ошибка сети. Проверьте интернет.</div>';
+                resultsDiv.innerHTML = `
+                    <div class="p-4 text-center text-sm">
+                        <span class="text-red-400">Ошибка поиска</span><br>
+                        <span class="text-xs text-gray-500">${error.message}</span>
+                    </div>`;
             }
+        }
+
+        // Поиск через TMDB
+        async function searchTMDB(query) {
+            const response = await fetch(
+                `${TMDB_BASE_URL}/search/tv?api_key=${TMDB_API_KEY}&language=ru-RU&query=${encodeURIComponent(query)}&page=1&include_adult=false`
+            );
+            
+            if (!response.ok) {
+                throw new Error(`TMDB: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (!data.results) return [];
+
+            return data.results
+                .filter(show => show.poster_path && show.name)
+                .map(show => ({
+                    id: show.id,
+                    title: show.name,
+                    originalTitle: show.original_name,
+                    year: show.first_air_date ? show.first_air_date.substring(0, 4) : '',
+                    posterUrl: `${TMDB_IMAGE_BASE}${show.poster_path}`
+                }));
+        }
+
+        // Поиск через OMDb (резервный)
+        async function searchOMDb(query) {
+            const response = await fetch(
+                `${OMDB_BASE_URL}?s=${encodeURIComponent(query)}&type=series`
+            );
+            
+            if (!response.ok) {
+                throw new Error(`OMDb: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (!data.Search) return [];
+
+            return data.Search
+                .filter(show => show.Poster !== 'N/A')
+                .map((show, index) => ({
+                    id: `omdb_${index}_${Date.now()}`,
+                    title: show.Title,
+                    originalTitle: show.Title,
+                    year: show.Year,
+                    posterUrl: show.Poster
+                }));
         }
 
         function addShowFromApi(id, title, originalTitle, posterUrl) {
@@ -499,4 +589,3 @@
     </script>
 </body>
 </html>
-
