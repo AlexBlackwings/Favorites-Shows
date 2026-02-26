@@ -18,9 +18,6 @@
 
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        .snap-x { scroll-snap-type: x mandatory; }
-        .snap-center { scroll-snap-align: center; }
 
         .slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes slideUp {
@@ -52,14 +49,12 @@
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
         .delete-btn {
-            opacity: 1;
-            transition: transform 0.2s, background-color 0.2s;
+            opacity: 0;
+            transition: opacity 0.2s, transform 0.2s, background-color 0.2s;
             cursor: pointer;
-            z-index: 20;
         }
-        @media (min-width: 768px) {
-            .delete-btn { opacity: 0; }
-            .card-container:hover .delete-btn { opacity: 1; }
+        .list-item:hover .delete-btn {
+            opacity: 1;
         }
         .delete-btn:active {
             transform: scale(0.9);
@@ -74,25 +69,19 @@
             color: #60a5fa;
         }
 
-        .card-poster {
-            cursor: pointer;
+        /* Постер в списке */
+        .list-poster {
+            width: 50px;
+            height: 70px;
+            border-radius: 8px;
+            object-fit: cover;
+            flex-shrink: 0;
         }
 
-        /* Оптимизация загрузки изображений */
-        .poster-img {
-            transition: opacity 0.3s ease;
-        }
-        .poster-img.loading {
-            opacity: 0.5;
-        }
-        .poster-img.loaded {
-            opacity: 1;
-        }
-
-        /* Прогрессивная загрузка - размытый фон */
         .poster-container {
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
             position: relative;
+            overflow: hidden;
         }
         .poster-container::before {
             content: '';
@@ -107,6 +96,42 @@
             0% { transform: translateX(0); }
             100% { transform: translateX(20px); }
         }
+
+        .poster-img {
+            transition: opacity 0.3s ease;
+        }
+        .poster-img.loading { opacity: 0.5; }
+        .poster-img.loaded { opacity: 1; }
+
+        /* Рейтинг бейдж */
+        .rating-badge {
+            min-width: 48px;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 14px;
+            text-align: center;
+        }
+        .rating-high { background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); }
+        .rating-med { background: rgba(234, 179, 8, 0.2); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.3); }
+        .rating-low { background: rgba(107, 114, 128, 0.2); color: #9ca3af; border: 1px solid rgba(107, 114, 128, 0.3); }
+        .rating-none { background: rgba(255, 255, 255, 0.05); color: #4b5563; border: 1px solid rgba(255, 255, 255, 0.1); }
+
+        /* Анимация добавления/удаления */
+        .list-item {
+            transition: all 0.3s ease;
+        }
+        .list-item.removing {
+            transform: translateX(-100%);
+            opacity: 0;
+        }
+        .list-item.adding {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
     </style>
 </head>
 <body class="h-screen flex flex-col">
@@ -115,7 +140,10 @@
         <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-purple-600 flex items-center justify-center text-sm font-bold shadow-lg shadow-blue-900/50" id="userAvatar">U</div>
-                <h1 class="text-lg font-bold tracking-tight text-white">Мои Сериалы</h1>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight text-white">Мои Сериалы</h1>
+                    <p class="text-[10px] text-gray-500" id="showCount">0 сериалов</p>
+                </div>
             </div>
             <button onclick="clearAllData()" class="text-xs text-gray-500 hover:text-red-400 transition-colors">
                 Сброс
@@ -135,8 +163,9 @@
         </div>
     </header>
 
-    <main class="flex-1 overflow-y-auto pt-6 pb-24">
+    <main class="flex-1 overflow-y-auto pb-24">
         
+        <!-- Пустое состояние -->
         <div id="emptyState" class="flex flex-col items-center justify-center h-64 text-gray-500 text-center px-6 hidden">
             <div class="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
                 <svg class="w-8 h-8 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
@@ -144,10 +173,12 @@
             <p class="text-sm">Ваш список пуст.<br>Введите название сериала в поиск сверху.</p>
         </div>
 
-        <div id="showList" class="flex gap-4 px-4 pb-8 hide-scroll snap-x overflow-x-auto">
+        <!-- Список сериалов (вертикальный) -->
+        <div id="showList" class="px-4 py-4 space-y-2">
         </div>
 
-        <div class="px-4 mt-2">
+        <!-- Блок профиля -->
+        <div class="px-4 mt-4">
             <div class="bg-gradient-to-r from-gray-900 to-gray-800 border border-white/10 rounded-2xl p-4 flex items-center justify-between shadow-lg">
                 <div class="overflow-hidden">
                     <p class="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Ваша ссылка</p>
@@ -219,9 +250,9 @@
         const TVMAZE_BASE_URL = 'https://api.tvmaze.com';
         const OMDB_BASE_URL = 'https://www.omdbapi.com';
 
-        // Кэш изображений в localStorage
+        // Кэш изображений
         const IMAGE_CACHE_KEY = 'tma_image_cache';
-        const IMAGE_CACHE_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 дней
+        const IMAGE_CACHE_EXPIRY = 7 * 24 * 60 * 60 * 1000;
 
         // Транслитерация
         const TRANSLITERATION = {
@@ -295,23 +326,6 @@
             'табу': 'Taboo',
             'подпольная империя': 'Boardwalk Empire',
             'дедвуд': 'Deadwood',
-            'рассказы из петли': 'Tales from the Loop',
-            'американская история ужасов': 'American Horror Story',
-            'американские боги': 'American Gods',
-            'санкта': 'Shadow and Bone',
-            'тень и кость': 'Shadow and Bone',
-            'кольцо власти': 'The Lord of the Rings: The Rings of Power',
-            'властелин колец': 'The Lord of the Rings: The Rings of Power',
-            'обитель зла': 'Resident Evil',
-            'стрела': 'Arrow',
-            'флэш': 'The Flash',
-            'супергёрл': 'Supergirl',
-            'титаны': 'Titans',
-            'гавайи 50': 'Hawaii Five-0',
-            'морская полиция': 'NCIS',
-            'ферма': 'The Ranch',
-            'дикий': 'The Wilds',
-            'ла casa de papel': 'Money Heist',
             'слово пацана': 'Boys Word',
             'метод': 'Method',
             'содержанки': 'Keepers',
@@ -340,8 +354,7 @@
             'бандитский петербург': 'Bandit Petersburg',
             'улицы разбитых фонарей': 'Streets of Broken Lights',
             'менты': 'Cops',
-            'тайны следствия': 'Investigation Secrets',
-            'детективы': 'Detectives'
+            'тайны следствия': 'Investigation Secrets'
         };
 
         // --- Состояние приложения ---
@@ -353,7 +366,6 @@
 
         // --- Инициализация ---
         document.addEventListener('DOMContentLoaded', () => {
-            // Очистка старого кэша изображений
             cleanImageCache();
 
             if (window.Telegram && window.Telegram.WebApp) {
@@ -383,7 +395,6 @@
         // 🚀 ОПТИМИЗАЦИЯ ИЗОБРАЖЕНИЙ
         // ============================================
         
-        // Получить изображение из кэша
         function getCachedImage(url) {
             try {
                 const cache = JSON.parse(localStorage.getItem(IMAGE_CACHE_KEY) || '{}');
@@ -391,32 +402,22 @@
                 if (cached && Date.now() - cached.timestamp < IMAGE_CACHE_EXPIRY) {
                     return cached.url;
                 }
-            } catch (e) {
-                console.warn('Cache read error:', e);
-            }
+            } catch (e) { console.warn('Cache read error:', e); }
             return null;
         }
 
-        // Сохранить изображение в кэш
         function cacheImage(originalUrl, optimizedUrl) {
             try {
                 const cache = JSON.parse(localStorage.getItem(IMAGE_CACHE_KEY) || '{}');
-                cache[originalUrl] = {
-                    url: optimizedUrl,
-                    timestamp: Date.now()
-                };
-                // Ограничиваем размер кэша (100 записей)
+                cache[originalUrl] = { url: optimizedUrl, timestamp: Date.now() };
                 const keys = Object.keys(cache);
                 if (keys.length > 100) {
                     keys.slice(0, keys.length - 100).forEach(key => delete cache[key]);
                 }
                 localStorage.setItem(IMAGE_CACHE_KEY, JSON.stringify(cache));
-            } catch (e) {
-                console.warn('Cache write error:', e);
-            }
+            } catch (e) { console.warn('Cache write error:', e); }
         }
 
-        // Очистить старый кэш
         function cleanImageCache() {
             try {
                 const cache = JSON.parse(localStorage.getItem(IMAGE_CACHE_KEY) || '{}');
@@ -427,33 +428,25 @@
                     }
                 });
                 localStorage.setItem(IMAGE_CACHE_KEY, JSON.stringify(cache));
-            } catch (e) {
-                console.warn('Cache clean error:', e);
-            }
+            } catch (e) { console.warn('Cache clean error:', e); }
         }
 
-        // Оптимизировать URL изображения (использовать меньший размер)
         function optimizeImageUrl(url) {
             if (!url || url.includes('placeholder')) return url;
             
-            // Проверка кэша
             const cached = getCachedImage(url);
             if (cached) return cached;
 
             let optimized = url;
             
-            // TVMaze - использовать medium вместо original
             if (url.includes('tvmaze.com')) {
                 optimized = url.replace('/original/', '/medium/');
-            }
-            // OMDb - использовать меньший размер
-            else if (url.includes('imdb.com') || url.includes('omdbapi.com')) {
+            } else if (url.includes('imdb.com') || url.includes('omdbapi.com')) {
                 optimized = url.replace('_V1_.jpg', '_V1_SX300.jpg');
             }
-            // Общие оптимизации
+            
             optimized = optimized.replace('.png', '.jpg');
             
-            // Сохранить в кэш
             if (optimized !== url) {
                 cacheImage(url, optimized);
             }
@@ -589,7 +582,6 @@
                 allResults.slice(0, 20).forEach(show => {
                     const exists = state.shows.find(s => s.id === show.id);
                     
-                    // Оптимизация постера
                     const posterUrl = optimizeImageUrl(show.posterUrl);
                     const year = show.year ? `(${show.year})` : '';
 
@@ -600,7 +592,7 @@
                     const item = document.createElement('div');
                     item.className = 'flex items-center gap-3 p-3 border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer last:border-0';
                     item.innerHTML = `
-                        <div class="poster-container w-12 h-16 rounded bg-gray-800 flex-shrink-0 overflow-hidden">
+                        <div class="poster-container w-12 h-16 rounded flex-shrink-0 overflow-hidden">
                             <img src="${posterUrl}" class="w-full h-full object-cover poster-img" loading="lazy" onload="this.classList.add('loaded'); this.classList.remove('loading');" onerror="this.src='https://via.placeholder.com/150x220?text=Error'; this.classList.add('loaded');">
                         </div>
                         <div class="flex-1 min-w-0">
@@ -629,13 +621,9 @@
         }
 
         async function searchTVMaze(query) {
-            const response = await fetch(
-                `${TVMAZE_BASE_URL}/search/shows?q=${encodeURIComponent(query)}`
-            );
+            const response = await fetch(`${TVMAZE_BASE_URL}/search/shows?q=${encodeURIComponent(query)}`);
             
-            if (!response.ok) {
-                throw new Error(`TVMaze: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`TVMaze: ${response.status}`);
             
             const data = await response.json();
             
@@ -644,10 +632,9 @@
             return data
                 .filter(item => item.show && item.show.name)
                 .map(item => {
-                    // ПРИОРИТЕТ: medium (210x295) вместо original для скорости
                     let posterUrl = 'https://via.placeholder.com/300x450?text=No+Image';
                     if (item.show.image && item.show.image.medium) {
-                        posterUrl = item.show.image.medium; // БЫСТРЕЕ!
+                        posterUrl = item.show.image.medium;
                     } else if (item.show.image && item.show.image.original) {
                         posterUrl = item.show.image.original;
                     }
@@ -664,13 +651,9 @@
         }
 
         async function searchOMDb(query) {
-            const response = await fetch(
-                `${OMDB_BASE_URL}?s=${encodeURIComponent(query)}&type=series`
-            );
+            const response = await fetch(`${OMDB_BASE_URL}?s=${encodeURIComponent(query)}&type=series`);
             
-            if (!response.ok) {
-                throw new Error(`OMDb: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`OMDb: ${response.status}`);
             
             const data = await response.json();
             
@@ -691,7 +674,7 @@
                 state.shows.push({
                     id: id,
                     title: title,
-                    posterUrl: optimizeImageUrl(posterUrl), // Оптимизация при сохранении
+                    posterUrl: optimizeImageUrl(posterUrl),
                     rating: null,
                     impressions: ''
                 });
@@ -711,65 +694,99 @@
             event.stopPropagation();
             
             if(confirm('Удалить этот сериал из списка?')) {
-                state.shows = state.shows.filter(s => s.id !== id);
-                saveUserData();
+                const item = document.querySelector(`[data-show-id="${id}"]`);
+                if (item) {
+                    item.classList.add('removing');
+                    setTimeout(() => {
+                        state.shows = state.shows.filter(s => s.id !== id);
+                        saveUserData();
+                    }, 300);
+                } else {
+                    state.shows = state.shows.filter(s => s.id !== id);
+                    saveUserData();
+                }
+                
                 if(window.Telegram && window.Telegram.WebApp.HapticFeedback) {
                     window.Telegram.WebApp.HapticFeedback.notificationOccurred('warning');
                 }
             }
         }
 
-        // --- Рендеринг списка ---
+        // --- Получить класс рейтинга ---
+        function getRatingClass(rating) {
+            if (rating === null || rating === undefined) return 'rating-none';
+            if (rating >= 7.5) return 'rating-high';
+            if (rating >= 5) return 'rating-med';
+            return 'rating-low';
+        }
+
+        // --- Рендеринг списка (вертикальный, с сортировкой) ---
         function renderShowList() {
             const container = document.getElementById('showList');
             const emptyState = document.getElementById('emptyState');
+            const showCount = document.getElementById('showCount');
             
             container.innerHTML = '';
 
             if (state.shows.length === 0) {
                 emptyState.classList.remove('hidden');
+                showCount.innerText = '0 сериалов';
                 return;
             } else {
                 emptyState.classList.add('hidden');
             }
 
-            state.shows.forEach(show => {
-                const card = document.createElement('div');
-                card.className = 'card-container snap-center flex-shrink-0 w-36 bg-[#1a1a1a] rounded-2xl overflow-hidden shadow-lg border border-white/5 relative group transition-transform hover:scale-[1.03] active:scale-95 duration-200';
-                
-                const ratingDisplay = show.rating !== null && show.rating !== undefined
-                    ? `<span class="text-yellow-400 font-bold text-sm">${show.rating}</span>` 
-                    : '<span class="text-gray-600 font-bold text-sm">--</span>';
+            // СОРТИРОВКА: от высокой оценки к низкой (без оценки в конце)
+            const sortedShows = [...state.shows].sort((a, b) => {
+                const ratingA = a.rating !== null && a.rating !== undefined ? a.rating : -1;
+                const ratingB = b.rating !== null && b.rating !== undefined ? b.rating : -1;
+                return ratingB - ratingA;
+            });
 
-                // Оптимизация постера
+            showCount.innerText = `${sortedShows.length} сериал${sortedShows.length === 1 ? '' : 'ов'}`;
+
+            sortedShows.forEach(show => {
+                const item = document.createElement('div');
+                item.className = 'list-item bg-[#1a1a1a] rounded-xl overflow-hidden border border-white/5 flex items-center gap-3 p-3 hover:bg-white/5 transition-colors adding';
+                item.setAttribute('data-show-id', show.id);
+                
+                const ratingClass = getRatingClass(show.rating);
+                const ratingDisplay = show.rating !== null && show.rating !== undefined
+                    ? show.rating.toFixed(1)
+                    : '--';
+
                 const safePosterUrl = optimizeImageUrl(show.posterUrl);
 
-                card.innerHTML = `
+                item.innerHTML = `
+                    <!-- Постер (слева) -->
+                    <div class="poster-container w-[50px] h-[70px] rounded-lg flex-shrink-0 overflow-hidden" onclick="openModal('${show.id}')">
+                        <img src="${safePosterUrl}" class="w-full h-full object-cover poster-img" loading="lazy" onload="this.classList.add('loaded'); this.classList.remove('loading');" onerror="this.src='https://via.placeholder.com/150x220?text=No+Image'; this.classList.add('loaded');">
+                    </div>
+                    
+                    <!-- Название (центр) -->
+                    <div class="flex-1 min-w-0" onclick="openModal('${show.id}')">
+                        <h3 class="font-bold text-sm text-white leading-tight mb-1 truncate" title="${show.title}">${show.title}</h3>
+                        <p class="text-[10px] text-gray-500 uppercase tracking-wider">Сериал</p>
+                    </div>
+                    
+                    <!-- Рейтинг (справа) -->
+                    <div class="flex flex-col items-end gap-1">
+                        <div class="rating-badge ${ratingClass}">
+                            ${ratingDisplay}
+                        </div>
+                        <button onclick="openModal('${show.id}')" class="text-[10px] text-gray-400 hover:text-white transition-colors">
+                            Подробнее
+                        </button>
+                    </div>
+                    
                     <!-- Кнопка удаления -->
-                    <button onclick="removeShow(event, '${show.id}')" class="delete-btn absolute top-2 right-2 z-20 bg-black/60 hover:bg-red-600 text-white rounded-full p-1.5 backdrop-blur-sm transition-colors border border-white/10">
+                    <button onclick="removeShow(event, '${show.id}')" class="delete-btn bg-black/60 hover:bg-red-600 text-white rounded-full p-1.5 backdrop-blur-sm transition-colors border border-white/10 flex-shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
-
-                    <!-- Постер с оптимизацией -->
-                    <div class="poster-container h-52 bg-gray-800 relative overflow-hidden card-poster" onclick="openModal('${show.id}')">
-                        <img src="${safePosterUrl}" class="w-full h-full object-cover poster-img" loading="lazy" onload="this.classList.add('loaded'); this.classList.remove('loading');" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'; this.classList.add('loaded');">
-                        <div class="absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent"></div>
-                        
-                        <div class="absolute bottom-3 right-3 bg-black/70 backdrop-blur-md px-2 py-1 rounded-md border border-white/10 shadow-lg">
-                            ${ratingDisplay}
-                        </div>
-                    </div>
-                    
-                    <div class="p-3">
-                        <h3 class="font-bold text-sm text-white leading-tight mb-1 line-clamp-2 h-10" title="${show.title}">${show.title}</h3>
-                        <button onclick="openModal('${show.id}')" class="w-full py-2 bg-white/5 hover:bg-white/10 text-[10px] font-bold uppercase tracking-wide rounded-lg transition-colors text-center text-gray-300">
-                            Открыть
-                        </button>
-                    </div>
                 `;
-                container.appendChild(card);
+                container.appendChild(item);
             });
         }
 
@@ -790,7 +807,7 @@
             
             document.getElementById('modalTitle').innerText = show.title;
             document.getElementById('modalStudio').innerText = 'Сериал';
-            document.getElementById('modalRatingDisplay').innerText = (show.rating !== null && show.rating !== undefined) ? show.rating : '--';
+            document.getElementById('modalRatingDisplay').innerText = (show.rating !== null && show.rating !== undefined) ? show.rating.toFixed(1) : '--';
             document.getElementById('impressionsInput').value = show.impressions || '';
             
             document.getElementById('ratingInputContainer').classList.add('hidden');
@@ -830,7 +847,7 @@
             if (showIndex !== -1) {
                 state.shows[showIndex].rating = val;
                 saveUserData();
-                document.getElementById('modalRatingDisplay').innerText = val;
+                document.getElementById('modalRatingDisplay').innerText = val.toFixed(1);
                 document.getElementById('ratingInputContainer').classList.add('hidden');
                 
                 if(window.Telegram && window.Telegram.WebApp.HapticFeedback) {
