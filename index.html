@@ -8,19 +8,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * {
-            box-sizing: border-box;
-        }
-        
         body {
             font-family: 'Inter', sans-serif;
             background-color: #0f0f0f;
             color: #ffffff;
             overflow-x: hidden;
             -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation;
-            margin: 0;
-            padding: 0;
         }
 
         .hide-scroll::-webkit-scrollbar { display: none; }
@@ -35,17 +28,12 @@
             to { transform: translateY(0); opacity: 1; }
         }
 
-        .modal-backdrop { 
-            background: rgba(0, 0, 0, 0.85); 
-            backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
-        }
+        .modal-backdrop { background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px); }
 
         .glass-input {
             background: rgba(255, 255, 255, 0.08);
             border: 1px solid rgba(255, 255, 255, 0.1);
             color: white;
-            -webkit-appearance: none;
         }
         .glass-input:focus {
             outline: none;
@@ -67,7 +55,7 @@
             opacity: 1;
             transition: transform 0.2s, background-color 0.2s;
             cursor: pointer;
-            z-index: 10;
+            z-index: 20;
         }
         @media (min-width: 768px) {
             .delete-btn { opacity: 0; }
@@ -78,33 +66,16 @@
             background-color: rgba(220, 38, 38, 0.8) !important;
         }
 
+        .source-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+        }
+
         .card-poster {
             cursor: pointer;
-        }
-
-        .poster-img {
-            transition: opacity 0.3s;
-        }
-        .poster-img.loading { opacity: 0.5; }
-        .poster-img.loaded { opacity: 1; }
-
-        .poster-placeholder {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-        }
-
-        /* Mobile optimizations */
-        @media (max-width: 767px) {
-            .search-results {
-                max-height: 50vh;
-            }
-            .btn {
-                min-height: 44px;
-                min-width: 44px;
-            }
-        }
-
-        .btn:active {
-            transform: scale(0.95);
         }
     </style>
 </head>
@@ -113,24 +84,23 @@
     <header class="p-4 sticky top-0 z-20 bg-[#0f0f0f]/95 backdrop-blur-md border-b border-white/5 shadow-lg">
         <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-purple-600 flex items-center justify-center text-sm font-bold shadow-lg" id="userAvatar">U</div>
+                <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-purple-600 flex items-center justify-center text-sm font-bold shadow-lg shadow-blue-900/50" id="userAvatar">U</div>
                 <h1 class="text-lg font-bold tracking-tight text-white">Мои Сериалы</h1>
             </div>
-            <button onclick="clearAllData()" class="text-xs text-gray-500 hover:text-red-400 transition-colors px-2 py-1 btn">
+            <button onclick="clearAllData()" class="text-xs text-gray-500 hover:text-red-400 transition-colors">
                 Сброс
             </button>
         </div>
         
-        <div class="relative" id="searchContainer">
-            <input type="text" id="searchInput" placeholder="Поиск сериалов..." 
-                class="w-full glass-input rounded-xl pl-4 pr-10 py-3 text-sm placeholder-gray-500 transition-all shadow-inner"
-                autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+        <div class="relative">
+            <input type="text" id="searchInput" placeholder="Поиск (Ведьмак, Mandalorian...)..." 
+                class="w-full glass-input rounded-xl pl-4 pr-10 py-3 text-sm placeholder-gray-500 transition-all shadow-inner">
             
             <div id="searchLoader" class="absolute right-3 top-3 hidden">
                 <div class="loader"></div>
             </div>
 
-            <div id="searchResults" class="search-results absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl max-h-64 overflow-y-auto z-50 hidden">
+            <div id="searchResults" class="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl max-h-64 overflow-y-auto z-50 hidden">
             </div>
         </div>
     </header>
@@ -139,9 +109,7 @@
         
         <div id="emptyState" class="flex flex-col items-center justify-center h-64 text-gray-500 text-center px-6 hidden">
             <div class="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
-                <svg class="w-8 h-8 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-                </svg>
+                <svg class="w-8 h-8 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
             </div>
             <p class="text-sm">Ваш список пуст.<br>Введите название сериала в поиск сверху.</p>
         </div>
@@ -155,14 +123,14 @@
                     <p class="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Ваша ссылка</p>
                     <p class="text-xs text-blue-400 truncate font-mono" id="profileLinkDisplay">Загрузка...</p>
                 </div>
-                <button onclick="shareProfile()" class="bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all text-white px-4 py-2 rounded-lg text-xs font-bold shadow-lg btn">
+                <button onclick="shareProfile()" class="bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all text-white px-4 py-2 rounded-lg text-xs font-bold shadow-lg shadow-blue-900/30">
                     Поделиться
                 </button>
             </div>
         </div>
     </main>
 
-    <!-- Modal -->
+    <!-- Модальное окно -->
     <div id="detailModal" class="fixed inset-0 z-50 hidden">
         <div class="modal-backdrop absolute inset-0" onclick="closeModal()"></div>
         
@@ -171,188 +139,214 @@
             <div class="w-12 h-1.5 bg-gray-700 rounded-full mx-auto mb-6 opacity-50"></div>
             
             <div class="flex gap-5 mb-6">
-                <img id="modalPoster" class="w-28 h-40 rounded-xl bg-gray-800 flex-shrink-0 object-cover shadow-2xl border border-white/10" src="" alt="Poster">
+                <img id="modalPoster" class="w-28 h-40 rounded-xl bg-gray-800 flex-shrink-0 object-cover shadow-2xl border border-white/10" src="" alt="Poster" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
                 <div class="flex-1 flex flex-col justify-center">
                     <h2 id="modalTitle" class="text-xl font-bold text-white leading-tight mb-1"></h2>
-                    <p id="modalStudio" class="text-sm text-gray-400 mb-4"></p>
+                    <p id="modalStudio" class="text-sm text-gray-400 mb-4 line-clamp-2"></p>
                     
-                    <div class="flex items-center gap-3">
-                        <div class="bg-green-500/10 text-green-400 px-3 py-1.5 rounded-lg text-sm font-bold border border-green-500/20">
-                            <span id="modalRatingDisplay">--</span> / 10
+                    <div class="flex items-center gap-3 mt-auto">
+                        <div class="bg-green-500/10 text-green-400 px-3 py-1.5 rounded-lg text-sm font-bold border border-green-500/20 flex items-center gap-1">
+                            <span id="modalRatingDisplay">--</span> 
+                            <span class="text-xs opacity-60">/ 10</span>
                         </div>
-                        <button onclick="enableEditRating()" class="text-xs text-gray-400 hover:text-white underline btn">Оценить</button>
+                        <button onclick="enableEditRating()" class="text-xs text-gray-400 hover:text-white underline decoration-gray-600 underline-offset-2">Оценить</button>
                     </div>
                 </div>
             </div>
 
+            <!-- Поле оценки -->
             <div id="ratingInputContainer" class="mb-6 hidden bg-white/5 p-4 rounded-xl border border-white/5">
-                <label class="block text-xs text-gray-400 mb-2">Ваша оценка</label>
+                <label class="block text-xs text-gray-400 mb-2 font-medium">Ваша оценка</label>
                 <div class="flex gap-2">
-                    <input type="number" id="ratingInput" step="0.1" min="0" max="10" class="glass-input w-full px-3 py-2 rounded-lg text-sm" placeholder="0.0 - 10.0">
-                    <button onclick="saveRating()" class="bg-green-600 text-white px-4 rounded-lg text-sm font-bold btn">OK</button>
+                    <input type="number" id="ratingInput" step="0.1" min="0" max="10" class="glass-input w-full px-3 py-2 rounded-lg text-sm font-mono" placeholder="0.0 - 10.0">
+                    <button onclick="saveRating()" class="bg-green-600 hover:bg-green-500 text-white px-4 rounded-lg text-sm font-bold transition-colors">OK</button>
                 </div>
             </div>
 
-            <div class="mb-24">
+            <!-- Впечатления -->
+            <div class="mb-24 sm:mb-6">
                 <label class="block text-sm font-medium text-gray-300 mb-2">Ваши впечатления</label>
-                <textarea id="impressionsInput" rows="6" class="w-full glass-input rounded-xl p-4 text-sm resize-none" placeholder="Напишите рецензию..."></textarea>
+                <textarea id="impressionsInput" rows="6" class="w-full glass-input rounded-xl p-4 text-sm resize-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="Напишите рецензию..."></textarea>
             </div>
 
-            <div class="flex gap-3">
-                <button onclick="saveImpressions()" class="flex-1 bg-white text-black py-3 rounded-xl font-bold text-sm active:scale-95 transition-transform btn">Сохранить</button>
-                <button onclick="closeModal()" class="flex-1 bg-gray-800 text-white py-3 rounded-xl font-bold text-sm active:scale-95 transition-transform btn">Закрыть</button>
+            <div class="flex gap-3 mt-6">
+                <button onclick="saveImpressions()" class="flex-1 bg-white text-black py-3.5 rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors">
+                    Сохранить
+                </button>
+                <button onclick="closeModal()" class="flex-1 bg-gray-800 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-gray-700 transition-colors">
+                    Закрыть
+                </button>
             </div>
         </div>
     </div>
 
     <script>
         // ============================================
-        // КОНФИГУРАЦИЯ API
+        // 📺 БЕСПЛАТНЫЕ API (без ключей)
         // ============================================
-        const CONFIG = {
-            TVMAZE_URL: 'https://api.tvmaze.com',
-            OMDB_URL: 'https://www.omdbapi.com',
-            TMDB_CDN: 'https://image.tmdb.org/t/p/w342',
-            STORAGE_PREFIX: 'tma_',
-            DEBOUNCE_DELAY: 600,
-            POSTER_TIMEOUT: 8000
+        const TVMAZE_BASE_URL = 'https://api.tvmaze.com';
+        const OMDB_BASE_URL = 'https://www.omdbapi.com';
+
+        // Транслитерация
+        const TRANSLITERATION = {
+            'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
+            'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+            'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+            'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch',
+            'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
         };
 
-        // TMDB ID для популярных сериалов (быстрые постеры)
-        const POPULAR_SHOWS = {
-            'the witcher': '71912', 'ведьмак': '71912',
-            'the mandalorian': '82856', 'мандалорец': '82856',
-            'sons of anarchy': '1409', 'сыны анархии': '1409',
-            'she-hulk': '92782', 'женщина халк': '92782',
-            'breaking bad': '1396', 'во все тяжкие': '1396',
-            'better call saul': '60059', 'лучше звоните солу': '60059',
-            'stranger things': '66732', 'очень странные дела': '66732',
-            'game of thrones': '1399', 'игра престолов': '1399',
-            'chernobyl': '87108', 'чернобыль': '87108',
-            'dark': '70523', 'тьма': '70523',
-            'the office': '2316', 'офис': '2316',
-            'friends': '1668', 'друзья': '1668',
-            'sherlock': '1988', 'шерлок': '1988',
-            'rick and morty': '60624', 'рик и морти': '60624',
-            'squid game': '93405', 'игра в кальмара': '93405',
-            'euphoria': '85552', 'эйфория': '85552',
-            'peaky blinders': '60574', 'острые козырьки': '60574',
-            'black mirror': '42009', 'черное зеркало': '42009',
-            'the boys': '76479', 'пацаны': '76479',
-            'wednesday': '119051', 'уэнсдей': '119051',
-            'arcane': '94605', 'аркейн': '94605',
-            'the umbrella academy': '75006', 'академия амбрелла': '75006',
-            'ozark': '69740', 'озарк': '69740',
-            'the crown': '65494', 'корона': '65494',
-            'sex education': '81356', 'сексуальное воспитание': '81356',
-            'money heist': '71446', 'бумажный дом': '71446',
-            'la casa de papel': '71446',
-            'supernatural': '1622', 'сверхъестественное': '1622',
-            'scrubs': '4556', 'клиник': '4556',
-            'the big bang theory': '1418', 'теория большого взрыва': '1418',
-            'brooklyn nine-nine': '48891', 'бруклин 99': '48891',
-            'the walking dead': '1402', 'ход мертвецов': '1402',
-            'doctor who': '57243', 'доктор кто': '57243',
-            'the x-files': '4087', 'секретные материалы': '4087',
-            'the kitchen': '58494', 'кухня': '58494',
-            'interns': '62016', 'интерны': '62016',
-            'physruk': '62891', 'физрук': '62891',
-            'major': '76669', 'мажор': '76669',
-            'trigger': '95057', 'триггер': '95057',
-            'boys word': '213714', 'слово пацана': '213714'
-        };
-
-        // Переводы названий
-        const TRANSLATIONS = {
-            'ведьмак': 'The Witcher', 'мандалорец': 'The Mandalorian',
-            'сыны анархии': 'Sons of Anarchy', 'женщина халк': 'She-Hulk',
-            'во все тяжкие': 'Breaking Bad', 'лучше звоните солу': 'Better Call Saul',
-            'очень странные дела': 'Stranger Things', 'игра престолов': 'Game of Thrones',
-            'чернобыль': 'Chernobyl', 'тьма': 'Dark', 'офис': 'The Office',
-            'друзья': 'Friends', 'шерлок': 'Sherlock', 'рик и морти': 'Rick and Morty',
-            'игра в кальмара': 'Squid Game', 'эйфория': 'Euphoria',
-            'острые козырьки': 'Peaky Blinders', 'черное зеркало': 'Black Mirror',
-            'пацаны': 'The Boys', 'уэнсдей': 'Wednesday', 'аркейн': 'Arcane',
-            'академия амбрелла': 'The Umbrella Academy', 'озарк': 'Ozark',
-            'корона': 'The Crown', 'сексуальное воспитание': 'Sex Education',
-            'бумажный дом': 'Money Heist', 'сверхъестественное': 'Supernatural',
-            'клиник': 'Scrubs', 'теория большого взрыва': 'The Big Bang Theory',
-            'бруклин 99': 'Brooklyn Nine-Nine', 'ход мертвецов': 'The Walking Dead',
-            'доктор кто': 'Doctor Who', 'секретные материалы': 'The X-Files',
-            'звездный путь': 'Star Trek', 'видоизмененный углерод': 'Altered Carbon',
-            'рассказ служанки': 'The Handmaid\'s Tale', 'мир дикого запада': 'Westworld',
-            'настоящий детектив': 'True Detective', 'фарго': 'Fargo',
-            'клан сопрано': 'The Sopranos', 'прослушка': 'The Wire',
-            'карточный домик': 'House of Cards', 'великая': 'The Great',
-            'благие знамения': 'Good Omens', 'виктория': 'Victoria',
-            'аббатство даунтон': 'Downton Abbey', 'шрэм': 'Shameless',
-            'табу': 'Taboo', 'подпольная империя': 'Boardwalk Empire',
+        // Словарь переводов
+        const SHOW_TRANSLATIONS = {
+            'ведьмак': 'The Witcher',
+            'мандалорец': 'The Mandalorian',
+            'сыны анархии': 'Sons of Anarchy',
+            'женщина халк': 'She-Hulk',
+            'во все тяжкие': 'Breaking Bad',
+            'лучше звоните солу': 'Better Call Saul',
+            'очень странные дела': 'Stranger Things',
+            'игра престолов': 'Game of Thrones',
+            'дом дракона': 'House of the Dragon',
+            'чернобыль': 'Chernobyl',
+            'тьма': 'Dark',
+            'офис': 'The Office',
+            'друзья': 'Friends',
+            'шерлок': 'Sherlock',
+            'рик и морти': 'Rick and Morty',
+            'игра в кальмара': 'Squid Game',
+            'эйфория': 'Euphoria',
+            'острые козырьки': 'Peaky Blinders',
+            'черное зеркало': 'Black Mirror',
+            'наследники': 'Succession',
+            'пацаны': 'The Boys',
+            'уэнсдей': 'Wednesday',
+            'аркейн': 'Arcane',
+            'академия амбрелла': 'The Umbrella Academy',
+            'озарк': 'Ozark',
+            'корона': 'The Crown',
+            'сексуальное воспитание': 'Sex Education',
+            'бумажный дом': 'Money Heist',
+            'элита': 'Elite',
+            'сверхъестественное': 'Supernatural',
+            'клиник': 'Scrubs',
+            'теория большого взрыва': 'The Big Bang Theory',
+            'как я встретил вашу маму': 'How I Met Your Mother',
+            'бруклин 99': 'Brooklyn Nine-Nine',
+            'ход мертвецов': 'The Walking Dead',
+            'lost': 'Lost',
+            'остаться в живых': 'Lost',
+            'доктор кто': 'Doctor Who',
+            'секретные материалы': 'The X-Files',
+            'звездный путь': 'Star Trek',
+            'звездные войны': 'Star Wars',
+            'видоизмененный углерод': 'Altered Carbon',
+            'любовь смерть и роботы': 'Love, Death & Robots',
+            'рассказ служанки': 'The Handmaid\'s Tale',
+            'маньяк': 'Maniac',
+            'мир дикого запада': 'Westworld',
+            'настоящий детектив': 'True Detective',
+            'фарго': 'Fargo',
+            'клан сопрано': 'The Sopranos',
+            'прослушка': 'The Wire',
+            'карточный домик': 'House of Cards',
+            'оранжевый хит': 'Orange Is the New Black',
+            'великая': 'The Great',
+            'благие знамения': 'Good Omens',
+            'после жизни': 'After Life',
+            'виктория': 'Victoria',
+            'аббатство даунтон': 'Downton Abbey',
+            'шрэм': 'Shameless',
+            'табу': 'Taboo',
+            'подпольная империя': 'Boardwalk Empire',
+            'дедвуд': 'Deadwood',
+            'рассказы из петли': 'Tales from the Loop',
             'американская история ужасов': 'American Horror Story',
-            'американские боги': 'American Gods', 'санкта': 'Shadow and Bone',
+            'американские боги': 'American Gods',
+            'санкта': 'Shadow and Bone',
+            'тень и кость': 'Shadow and Bone',
             'кольцо власти': 'The Lord of the Rings: The Rings of Power',
-            'обитель зла': 'Resident Evil', 'стрела': 'Arrow',
-            'флэш': 'The Flash', 'супергёрл': 'Supergirl',
-            'титаны': 'Titans', 'гавайи 50': 'Hawaii Five-0',
-            'морская полиция': 'NCIS', 'слово пацана': 'Boys Word',
-            'метод': 'Method', 'триггер': 'Trigger', 'мажор': 'Major',
-            'физрук': 'Physruk', 'универ': 'Univers', 'интерны': 'Interns',
-            'воронины': 'Voronins', 'сваты': 'Svaty', 'папины дочки': 'Daddy Daughters',
-            'молодежка': 'Molodezhka', 'кухня': 'Kitchen', 'отель элеон': 'Hotel Eleon',
-            'полицейский с рублевки': 'Policeman from Rublevka'
+            'властелин колец': 'The Lord of the Rings: The Rings of Power',
+            'обитель зла': 'Resident Evil',
+            'стрела': 'Arrow',
+            'флэш': 'The Flash',
+            'супергёрл': 'Supergirl',
+            'титаны': 'Titans',
+            'гавайи 50': 'Hawaii Five-0',
+            'морская полиция': 'NCIS',
+            'ферма': 'The Ranch',
+            'дикий': 'The Wilds',
+            'ла casa de papel': 'Money Heist',
+            'слово пацана': 'Boys Word',
+            'метод': 'Method',
+            'содержанки': 'Keepers',
+            'топи': 'Topi',
+            'псих': 'Psychopath',
+            'колл-центр': 'Call Center',
+            'чикатило': 'Chikatilo',
+            'триггер': 'Trigger',
+            'мажор': 'Major',
+            'физрук': 'Physruk',
+            'универ': 'Univers',
+            'реальные пацаны': 'Real Guys',
+            'интерны': 'Interns',
+            'воронины': 'Voronins',
+            'сваты': 'Svaty',
+            'папины дочки': 'Daddy Daughters',
+            'молодежка': 'Molodezhka',
+            'кухня': 'Kitchen',
+            'отель элеон': 'Hotel Eleon',
+            'ивановы-ивановы': 'Ivanovs',
+            'полицейский с рублевки': 'Policeman from Rublevka',
+            'моя прекрасная няня': 'My Fair Nanny',
+            'не родись красивой': 'Do Not Be Born Beautiful',
+            'бедная настя': 'Poor Nastya',
+            'каменская': 'Kamenskaya',
+            'бандитский петербург': 'Bandit Petersburg',
+            'улицы разбитых фонарей': 'Streets of Broken Lights',
+            'менты': 'Cops',
+            'тайны следствия': 'Investigation Secrets',
+            'детективы': 'Detectives',
+            'следователь давидц': 'Investigator Davids',
+            'агент национальной безопасности': 'National Security Agent',
+            'особенности национальной': 'Peculiarities of National',
+            'даун хаус': 'Down House',
+            'день радио': 'Radio Day',
+            'день выборов': 'Election Day',
+            'что творят мужчины': 'What Men Do',
+            'горько': 'Bitter',
+            'самый лучший день': 'The Best Day',
+            'ёлки': 'Fir Trees',
+            'лесник': 'Forester',
+            'гражданин начальник': 'Citizen Chief',
+            'каменская': 'Kamenskaya',
+            'марш турецкого': 'Turkish March',
+            'бриганда': 'Brigada',
+            'бумер': 'Bumer',
+            'бой с тенью': 'Shadow Fight',
+            'ночной дозор': 'Night Watch',
+            'дневной дозор': 'Day Watch',
+            'сталинград': 'Stalingrad',
+            'экипаж': 'Crew',
+            'антикиллер': 'Antikiller',
+            'жмурки': 'Jmurki',
+            'свои': 'Own',
+            '9 рота': '9th Company',
+            'остров': 'Island',
+            'монгол': 'Mongol',
+            'царь': 'Tsar',
+            'поп': 'Priest',
+            ' Determination': 'Determination'
         };
 
-        // Состояние приложения
+        // --- Состояние приложения ---
         let state = {
             userId: null,
             shows: [],
-            currentModalShowId: null,
-            searchTimeout: null
+            currentModalShowId: null
         };
 
-        // ============================================
-        // УТИЛИТЫ
-        // ============================================
-        
-        function getStorageKey(key) {
-            return `${CONFIG.STORAGE_PREFIX}${key}_${state.userId}`;
-        }
-
-        function transliterate(text) {
-            const map = {
-                'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
-                'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
-                'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
-                'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch',
-                'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
-            };
-            return text.toLowerCase().split('').map(char => map[char] || char).join('');
-        }
-
-        function getFastPosterUrl(showName) {
-            if (!showName) return null;
-            const lowerName = showName.toLowerCase();
-            for (const [key, tmdbId] of Object.entries(POPULAR_SHOWS)) {
-                if (lowerName.includes(key)) {
-                    return `${CONFIG.TMDB_CDN}${tmdbId}.jpg`;
-                }
-            }
-            return null;
-        }
-
-        function getPlaceholderSVG() {
-            return `data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="450"%3E%3Cdefs%3E%3ClinearGradient id="g" x1="0%25" y1="0%25" x2="100%25" y2="100%25"%3E%3Cstop offset="0%25" stop-color="%231a1a2e"/%3E%3Cstop offset="50%25" stop-color="%2316213e"/%3E%3Cstop offset="100%25" stop-color="%230f3460"/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill="url(%23g)" width="300" height="450"/%3E%3Ctext fill="%23444444" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-size="16" font-family="Arial"%3ENo Image%3C/text%3E%3C/svg%3E`;
-        }
-
-        // ============================================
-        // ИНИЦИАЛИЗАЦИЯ
-        // ============================================
-        
+        // --- Инициализация ---
         document.addEventListener('DOMContentLoaded', () => {
-            initApp();
-        });
-
-        function initApp() {
-            // Telegram WebApp
             if (window.Telegram && window.Telegram.WebApp) {
                 window.Telegram.WebApp.ready();
                 window.Telegram.WebApp.expand();
@@ -361,102 +355,76 @@
                 if (tgUser && tgUser.id) {
                     state.userId = 'tg_' + tgUser.id;
                 } else {
-                    state.userId = 'web_' + generateRandomId();
+                    state.userId = 'web_' + Math.random().toString(36).substr(2, 9);
                 }
             } else {
-                state.userId = 'web_' + generateRandomId();
+                state.userId = 'web_' + Math.random().toString(36).substr(2, 9);
             }
             
             loadUserData();
-            setupUI();
-            setupSearch();
-            renderShowList();
-        }
-
-        function generateRandomId() {
-            return Math.random().toString(36).substr(2, 9);
-        }
-
-        function setupUI() {
+            
             document.getElementById('userAvatar').innerText = state.userId.slice(4, 6).toUpperCase();
             document.getElementById('profileLinkDisplay').innerText = `t.me/app?startapp=${state.userId}`;
-        }
+            
+            renderShowList();
+            setupSearch();
+        });
 
-        // ============================================
-        // ХРАНЕНИЕ ДАННЫХ
-        // ============================================
-        
         function loadUserData() {
-            try {
-                const key = getStorageKey('shows');
-                const saved = localStorage.getItem(key);
-                state.shows = saved ? JSON.parse(saved) : [];
-            } catch (e) {
-                console.error('Load error:', e);
-                state.shows = [];
-            }
+            const storageKey = `tma_shows_${state.userId}`;
+            const saved = localStorage.getItem(storageKey);
+            state.shows = saved ? JSON.parse(saved) : [];
         }
 
         function saveUserData() {
-            try {
-                const key = getStorageKey('shows');
-                localStorage.setItem(key, JSON.stringify(state.shows));
-                renderShowList();
-            } catch (e) {
-                console.error('Save error:', e);
-            }
+            const storageKey = `tma_shows_${state.userId}`;
+            localStorage.setItem(storageKey, JSON.stringify(state.shows));
+            renderShowList();
         }
 
         function clearAllData() {
-            if (confirm('Удалить весь список сериалов?')) {
+            if(confirm('Удалить весь список сериалов?')) {
                 state.shows = [];
                 saveUserData();
-                hapticFeedback('warning');
+                if(window.Telegram && window.Telegram.WebApp.HapticFeedback) {
+                    window.Telegram.WebApp.HapticFeedback.notificationOccurred('warning');
+                }
             }
         }
 
-        // ============================================
-        // ПОИСК
-        // ============================================
-        
+        // --- Логика Поиска ---
         function setupSearch() {
             const input = document.getElementById('searchInput');
-            const searchContainer = document.getElementById('searchContainer');
-            
+            const resultsDiv = document.getElementById('searchResults');
+            const loader = document.getElementById('searchLoader');
+            let timeoutId = null;
+
             input.addEventListener('input', (e) => {
                 const val = e.target.value.trim();
                 
-                if (state.searchTimeout) clearTimeout(state.searchTimeout);
+                if (timeoutId) clearTimeout(timeoutId);
 
                 if (val.length < 2) {
-                    hideSearchResults();
+                    resultsDiv.classList.add('hidden');
                     return;
                 }
 
-                state.searchTimeout = setTimeout(() => {
+                timeoutId = setTimeout(() => {
                     performSearch(val);
-                }, CONFIG.DEBOUNCE_DELAY);
+                }, 600);
             });
 
-            // Закрытие при клике вне
             document.addEventListener('click', (e) => {
-                if (!searchContainer.contains(e.target)) {
-                    hideSearchResults();
+                if (!e.target.closest('.relative')) {
+                    resultsDiv.classList.add('hidden');
                 }
             });
-
-            // Закрытие при скролле
-            document.addEventListener('scroll', () => {
-                hideSearchResults();
-            }, { passive: true });
         }
 
-        function hideSearchResults() {
-            document.getElementById('searchResults').classList.add('hidden');
-        }
-
-        function showSearchResults() {
-            document.getElementById('searchResults').classList.remove('hidden');
+        function transliterate(text) {
+            return text.toLowerCase().split('').map(char => 
+                TRANSLITERATION[char] || char
+            ).join('');
         }
 
         async function performSearch(query) {
@@ -465,37 +433,49 @@
             
             loader.classList.remove('hidden');
             resultsDiv.innerHTML = '';
-            showSearchResults();
+            resultsDiv.classList.remove('hidden');
 
             try {
                 let allResults = [];
                 const seenIds = new Set();
-                const searchTerms = buildSearchTerms(query);
 
-                // Поиск по TVMaze
+                const searchTerms = [query];
+                const lowerQuery = query.toLowerCase();
+
+                for (const [ru, en] of Object.entries(SHOW_TRANSLATIONS)) {
+                    if (lowerQuery.includes(ru)) {
+                        searchTerms.push(en);
+                        break;
+                    }
+                }
+
+                if (/[а-яё]/i.test(query)) {
+                    searchTerms.push(transliterate(query));
+                }
+
                 for (const term of searchTerms) {
                     try {
-                        const results = await searchTVMaze(term);
-                        results.forEach(item => {
-                            if (!seenIds.has(item.id)) {
-                                seenIds.add(item.id);
-                                allResults.push(item);
+                        const tvmazeResults = await searchTVMaze(term);
+                        tvmazeResults.forEach(show => {
+                            if (!seenIds.has(show.id)) {
+                                seenIds.add(show.id);
+                                allResults.push({ ...show, source: 'TVMaze' });
                             }
                         });
                     } catch (e) {
                         console.warn('TVMaze failed:', e);
                     }
+
                     if (allResults.length >= 15) break;
                 }
 
-                // Резервный поиск OMDb
                 if (allResults.length < 5) {
                     try {
-                        const results = await searchOMDb(query);
-                        results.forEach(item => {
-                            if (!seenIds.has(item.id)) {
-                                seenIds.add(item.id);
-                                allResults.push(item);
+                        const omdbResults = await searchOMDb(query);
+                        omdbResults.forEach(show => {
+                            if (!seenIds.has(show.id)) {
+                                seenIds.add(show.id);
+                                allResults.push({ ...show, source: 'OMDb' });
                             }
                         });
                     } catch (e) {
@@ -504,121 +484,116 @@
                 }
 
                 loader.classList.add('hidden');
-                renderSearchResults(allResults);
+                resultsDiv.innerHTML = '';
+
+                if (allResults.length === 0) {
+                    resultsDiv.innerHTML = `
+                        <div class="p-4 text-center text-sm text-gray-400">
+                            Ничего не найдено 😔<br>
+                            <span class="text-xs opacity-60">Попробуйте английское название</span>
+                        </div>`;
+                    return;
+                }
+
+                allResults.slice(0, 20).forEach(show => {
+                    const exists = state.shows.find(s => s.id === show.id);
+                    
+                    const posterUrl = show.posterUrl && show.posterUrl !== 'N/A' 
+                        ? show.posterUrl 
+                        : 'https://via.placeholder.com/300x450?text=No+Image';
+                    const year = show.year ? `(${show.year})` : '';
+
+                    const btnText = exists ? 'В списке' : 'Добавить';
+                    const btnClass = exists ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-900/20';
+                    const disabled = exists ? 'disabled' : '';
+
+                    const item = document.createElement('div');
+                    item.className = 'flex items-center gap-3 p-3 border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer last:border-0';
+                    item.innerHTML = `
+                        <img src="${posterUrl}" class="w-12 h-16 rounded bg-gray-800 object-cover shadow-md flex-shrink-0" onerror="this.src='https://via.placeholder.com/150x220?text=Error'">
+                        <div class="flex-1 min-w-0">
+                            <div class="font-bold text-sm truncate text-white leading-tight mb-1">${show.title}</div>
+                            <div class="text-xs text-gray-400 truncate flex items-center gap-2">
+                                <span>${year}</span>
+                                <span class="source-badge">${show.source}</span>
+                            </div>
+                        </div>
+                        <button ${disabled} onclick="addShowFromApi('${show.id}', '${show.title.replace(/'/g, "\\'")}', '${posterUrl}')" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-all whitespace-nowrap ${btnClass}">
+                            ${btnText}
+                        </button>
+                    `;
+                    resultsDiv.appendChild(item);
+                });
 
             } catch (error) {
                 console.error('Search error:', error);
                 loader.classList.add('hidden');
-                resultsDiv.innerHTML = '<div class="p-4 text-center text-sm text-red-400">Ошибка поиска</div>';
+                resultsDiv.innerHTML = `
+                    <div class="p-4 text-center text-sm">
+                        <span class="text-red-400">Ошибка поиска</span><br>
+                        <span class="text-xs text-gray-500">${error.message}</span>
+                    </div>`;
             }
-        }
-
-        function buildSearchTerms(query) {
-            const terms = [query];
-            const lowerQuery = query.toLowerCase();
-
-            // Добавляем перевод
-            for (const [ru, en] of Object.entries(TRANSLATIONS)) {
-                if (lowerQuery.includes(ru)) {
-                    terms.push(en);
-                    break;
-                }
-            }
-
-            // Добавляем транслитерацию
-            if (/[а-яё]/i.test(query)) {
-                terms.push(transliterate(query));
-            }
-
-            return terms;
         }
 
         async function searchTVMaze(query) {
             const response = await fetch(
-                `${CONFIG.TVMAZE_URL}/search/shows?q=${encodeURIComponent(query)}`,
-                { method: 'GET', headers: { 'Accept': 'application/json' } }
+                `${TVMAZE_BASE_URL}/search/shows?q=${encodeURIComponent(query)}`
             );
             
-            if (!response.ok) throw new Error(`TVMaze: ${response.status}`);
+            if (!response.ok) {
+                throw new Error(`TVMaze: ${response.status}`);
+            }
             
             const data = await response.json();
+            
             if (!data || data.length === 0) return [];
 
             return data
-                .filter(item => item.show && item.show.id && item.show.name)
-                .map(item => ({
-                    id: `tvmaze_${item.show.id}`,
-                    title: item.show.name,
-                    year: item.show.premiered ? item.show.premiered.substring(0, 4) : '',
-                    posterUrl: getFastPosterUrl(item.show.name) || 
-                               (item.show.image && item.show.image.medium ? item.show.image.medium : getPlaceholderSVG()),
-                    network: item.show.network ? item.show.network.name : ''
-                }));
+                .filter(item => item.show && item.show.name)
+                .map(item => {
+                    let posterUrl = 'https://via.placeholder.com/300x450?text=No+Image';
+                    if (item.show.image && item.show.image.medium) {
+                        posterUrl = item.show.image.medium;
+                    } else if (item.show.image && item.show.image.original) {
+                        posterUrl = item.show.image.original;
+                    }
+
+                    return {
+                        id: `tvmaze_${item.show.id}`,
+                        title: item.show.name,
+                        year: item.show.premiered ? item.show.premiered.substring(0, 4) : '',
+                        posterUrl: posterUrl,
+                        network: item.show.network ? item.show.network.name : '',
+                        rating: item.show.rating ? item.show.rating.average : null
+                    };
+                });
         }
 
         async function searchOMDb(query) {
             const response = await fetch(
-                `${CONFIG.OMDB_URL}?s=${encodeURIComponent(query)}&type=series`,
-                { method: 'GET', headers: { 'Accept': 'application/json' } }
+                `${OMDB_BASE_URL}?s=${encodeURIComponent(query)}&type=series`
             );
             
-            if (!response.ok) throw new Error(`OMDb: ${response.status}`);
+            if (!response.ok) {
+                throw new Error(`OMDb: ${response.status}`);
+            }
             
             const data = await response.json();
+            
             if (!data.Search) return [];
 
             return data.Search
-                .filter(show => show.Title && show.Poster && show.Poster !== 'N/A')
+                .filter(show => show.Title)
                 .map((show, index) => ({
                     id: `omdb_${show.imdbID || index}_${Date.now()}`,
                     title: show.Title,
                     year: show.Year,
-                    posterUrl: getFastPosterUrl(show.Title) || show.Poster
+                    posterUrl: show.Poster && show.Poster !== 'N/A' ? show.Poster : 'https://via.placeholder.com/300x450?text=No+Image'
                 }));
         }
 
-        function renderSearchResults(results) {
-            const resultsDiv = document.getElementById('searchResults');
-            resultsDiv.innerHTML = '';
-
-            if (results.length === 0) {
-                resultsDiv.innerHTML = '<div class="p-4 text-center text-sm text-gray-400">Ничего не найдено</div>';
-                return;
-            }
-
-            results.slice(0, 20).forEach(show => {
-                const exists = state.shows.find(s => s.id === show.id);
-                
-                const btnText = exists ? 'В списке' : 'Добавить';
-                const btnClass = exists 
-                    ? 'bg-gray-700 text-gray-400 cursor-not-allowed' 
-                    : 'bg-blue-600 text-white hover:bg-blue-500 active:scale-95';
-                const disabled = exists ? 'disabled' : '';
-
-                const item = document.createElement('div');
-                item.className = 'flex items-center gap-3 p-3 border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer';
-                item.innerHTML = `
-                    <img src="${show.posterUrl}" class="w-12 h-16 rounded bg-gray-800 object-cover shadow-md flex-shrink-0" loading="lazy">
-                    <div class="flex-1 min-w-0">
-                        <div class="font-bold text-sm truncate text-white">${show.title}</div>
-                        <div class="text-xs text-gray-400">${show.year}</div>
-                    </div>
-                    <button ${disabled} class="px-3 py-1.5 rounded-lg text-xs font-bold transition-transform btn ${btnClass}" 
-                        onclick="addShow('${show.id}', '${escapeHtml(show.title)}', '${show.posterUrl}')">
-                        ${btnText}
-                    </button>
-                `;
-                resultsDiv.appendChild(item);
-            });
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML.replace(/'/g, "\\'");
-        }
-
-        function addShow(id, title, posterUrl) {
+        function addShowFromApi(id, title, posterUrl) {
             if (!state.shows.find(s => s.id === id)) {
                 state.shows.push({
                     id: id,
@@ -629,15 +604,29 @@
                 });
                 saveUserData();
                 document.getElementById('searchInput').value = '';
-                hideSearchResults();
-                hapticFeedback('light');
+                document.getElementById('searchResults').classList.add('hidden');
+                
+                if(window.Telegram && window.Telegram.WebApp.HapticFeedback) {
+                    window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+                }
             }
         }
 
-        // ============================================
-        // РЕНДЕРИНГ СПИСКА
-        // ============================================
-        
+        // --- Удаление сериала ---
+        function removeShow(event, id) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            if(confirm('Удалить этот сериал из списка?')) {
+                state.shows = state.shows.filter(s => s.id !== id);
+                saveUserData();
+                if(window.Telegram && window.Telegram.WebApp.HapticFeedback) {
+                    window.Telegram.WebApp.HapticFeedback.notificationOccurred('warning');
+                }
+            }
+        }
+
+        // --- Рендеринг списка ---
         function renderShowList() {
             const container = document.getElementById('showList');
             const emptyState = document.getElementById('emptyState');
@@ -647,136 +636,77 @@
             if (state.shows.length === 0) {
                 emptyState.classList.remove('hidden');
                 return;
+            } else {
+                emptyState.classList.add('hidden');
             }
-            emptyState.classList.add('hidden');
 
             state.shows.forEach(show => {
-                const card = createShowCard(show);
+                const card = document.createElement('div');
+                card.className = 'card-container snap-center flex-shrink-0 w-36 bg-[#1a1a1a] rounded-2xl overflow-hidden shadow-lg border border-white/5 relative group transition-transform hover:scale-[1.03] active:scale-95 duration-200';
+                
+                const ratingDisplay = show.rating !== null && show.rating !== undefined
+                    ? `<span class="text-yellow-400 font-bold text-sm">${show.rating}</span>` 
+                    : '<span class="text-gray-600 font-bold text-sm">--</span>';
+
+                const safePosterUrl = show.posterUrl && show.posterUrl !== 'N/A' 
+                    ? show.posterUrl 
+                    : 'https://via.placeholder.com/300x450?text=No+Image';
+
+                card.innerHTML = `
+                    <!-- Кнопка удаления -->
+                    <button onclick="removeShow(event, '${show.id}')" class="delete-btn absolute top-2 right-2 z-20 bg-black/60 hover:bg-red-600 text-white rounded-full p-1.5 backdrop-blur-sm transition-colors border border-white/10">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+
+                    <!-- Постер с открытием модалки -->
+                    <div class="h-52 bg-gray-800 relative overflow-hidden card-poster" onclick="openModal('${show.id}')">
+                        <img src="${safePosterUrl}" class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" alt="${show.title}" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
+                        <div class="absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent"></div>
+                        
+                        <div class="absolute bottom-3 right-3 bg-black/70 backdrop-blur-md px-2 py-1 rounded-md border border-white/10 shadow-lg">
+                            ${ratingDisplay}
+                        </div>
+                    </div>
+                    
+                    <div class="p-3">
+                        <h3 class="font-bold text-sm text-white leading-tight mb-1 line-clamp-2 h-10" title="${show.title}">${show.title}</h3>
+                        <button onclick="openModal('${show.id}')" class="w-full py-2 bg-white/5 hover:bg-white/10 text-[10px] font-bold uppercase tracking-wide rounded-lg transition-colors text-center text-gray-300">
+                            Открыть
+                        </button>
+                    </div>
+                `;
                 container.appendChild(card);
             });
         }
 
-        function createShowCard(show) {
-            const card = document.createElement('div');
-            card.className = 'card-container snap-center flex-shrink-0 w-36 bg-[#1a1a1a] rounded-2xl overflow-hidden shadow-lg border border-white/5 relative';
-            
-            const ratingDisplay = (show.rating !== null && show.rating !== undefined)
-                ? `<span class="text-yellow-400 font-bold">${show.rating}</span>` 
-                : '<span class="text-gray-600 font-bold">--</span>';
-
-            // Обновляем постер если есть быстрый CDN
-            let displayPosterUrl = show.posterUrl;
-            const fastPoster = getFastPosterUrl(show.title);
-            if (fastPoster) {
-                displayPosterUrl = fastPoster;
-                show.posterUrl = fastPoster;
-                saveUserData();
+        // --- Модальное окно ---
+        function openModal(id) {
+            const show = state.shows.find(s => s.id === id);
+            if (!show) {
+                console.error('Show not found:', id);
+                return;
             }
 
-            // Кнопка удаления
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'delete-btn absolute top-2 right-2 bg-black/60 hover:bg-red-600 text-white rounded-full p-1.5 backdrop-blur-sm border border-white/10 btn';
-            deleteBtn.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            `;
-            deleteBtn.onclick = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                removeShow(show.id);
-            };
+            state.currentModalShowId = id;
 
-            // Контейнер постера
-            const posterContainer = document.createElement('div');
-            posterContainer.className = 'h-52 bg-gray-800 relative overflow-hidden card-poster poster-placeholder';
-            posterContainer.onclick = () => openModal(show.id);
+            const posterImg = document.getElementById('modalPoster');
+            posterImg.src = show.posterUrl && show.posterUrl !== 'N/A' 
+                ? show.posterUrl 
+                : 'https://via.placeholder.com/300x450?text=No+Image';
             
-            const img = document.createElement('img');
-            img.className = 'poster-img absolute inset-0 w-full h-full object-cover loading';
-            img.src = displayPosterUrl;
-            img.loading = 'lazy';
-            img.alt = show.title;
-            img.crossOrigin = 'anonymous';
-            img.onerror = function() {
-                this.src = getPlaceholderSVG();
-                this.classList.remove('loading');
-                this.classList.add('loaded');
-                posterContainer.classList.remove('poster-placeholder');
-            };
-            img.onload = function() {
-                this.classList.remove('loading');
-                this.classList.add('loaded');
-                posterContainer.classList.remove('poster-placeholder');
-            };
-            
-            const gradient = document.createElement('div');
-            gradient.className = 'absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent pointer-events-none';
-            
-            const ratingBadge = document.createElement('div');
-            ratingBadge.className = 'absolute bottom-3 right-3 bg-black/70 backdrop-blur-md px-2 py-1 rounded-md border border-white/10 pointer-events-none';
-            ratingBadge.innerHTML = ratingDisplay;
-
-            posterContainer.appendChild(img);
-            posterContainer.appendChild(gradient);
-            posterContainer.appendChild(ratingBadge);
-
-            // Инфо блок
-            const infoDiv = document.createElement('div');
-            infoDiv.className = 'p-3';
-            infoDiv.innerHTML = `
-                <h3 class="font-bold text-sm text-white leading-tight mb-1 line-clamp-2 h-10">${show.title}</h3>
-                <button class="w-full py-2 bg-white/5 hover:bg-white/10 active:bg-white/20 text-xs font-bold rounded-lg transition-colors text-center text-gray-300 btn">
-                    Открыть
-                </button>
-            `;
-            infoDiv.querySelector('button').onclick = () => openModal(show.id);
-
-            card.appendChild(deleteBtn);
-            card.appendChild(posterContainer);
-            card.appendChild(infoDiv);
-            
-            return card;
-        }
-
-        function removeShow(showId) {
-            if (confirm('Удалить этот сериал из списка?')) {
-                state.shows = state.shows.filter(s => s.id !== showId);
-                saveUserData();
-                hapticFeedback('warning');
-            }
-        }
-
-        // ============================================
-        // МОДАЛЬНОЕ ОКНО
-        // ============================================
-        
-        function openModal(showId) {
-            const show = state.shows.find(s => s.id === showId);
-            if (!show) return;
-
-            state.currentModalShowId = showId;
-
-            let posterUrl = show.posterUrl;
-            const fastPoster = getFastPosterUrl(show.title);
-            if (fastPoster) posterUrl = fastPoster;
-
-            const modalPoster = document.getElementById('modalPoster');
-            modalPoster.src = posterUrl;
-            modalPoster.onerror = function() {
-                this.src = getPlaceholderSVG();
-            };
-
-            document.getElementById('modalTitle').textContent = show.title;
-            document.getElementById('modalStudio').textContent = '';
-            document.getElementById('modalRatingDisplay').textContent = 
-                (show.rating !== null && show.rating !== undefined) ? show.rating : '--';
+            document.getElementById('modalTitle').innerText = show.title;
+            document.getElementById('modalStudio').innerText = 'Сериал';
+            document.getElementById('modalRatingDisplay').innerText = (show.rating !== null && show.rating !== undefined) ? show.rating : '--';
             document.getElementById('impressionsInput').value = show.impressions || '';
             
             document.getElementById('ratingInputContainer').classList.add('hidden');
             document.getElementById('detailModal').classList.remove('hidden');
             
-            hapticFeedback('selection');
+            if(window.Telegram && window.Telegram.WebApp.HapticFeedback) {
+                window.Telegram.WebApp.HapticFeedback.selectionChanged();
+            }
         }
 
         function closeModal() {
@@ -789,7 +719,7 @@
             const input = document.getElementById('ratingInput');
             const show = state.shows.find(s => s.id === state.currentModalShowId);
             
-            input.value = (show.rating !== null && show.rating !== undefined) ? show.rating : '';
+            input.value = show.rating !== null && show.rating !== undefined ? show.rating : '';
             container.classList.remove('hidden');
             input.focus();
         }
@@ -801,15 +731,19 @@
             if (isNaN(val)) val = 0;
             if (val < 0) val = 0;
             if (val > 10) val = 10;
+
             val = Math.round(val * 10) / 10;
 
             const showIndex = state.shows.findIndex(s => s.id === state.currentModalShowId);
             if (showIndex !== -1) {
                 state.shows[showIndex].rating = val;
                 saveUserData();
-                document.getElementById('modalRatingDisplay').textContent = val;
+                document.getElementById('modalRatingDisplay').innerText = val;
                 document.getElementById('ratingInputContainer').classList.add('hidden');
-                hapticFeedback('success');
+                
+                if(window.Telegram && window.Telegram.WebApp.HapticFeedback) {
+                    window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                }
             }
         }
 
@@ -820,22 +754,9 @@
             if (showIndex !== -1) {
                 state.shows[showIndex].impressions = text;
                 saveUserData();
-                hapticFeedback('success');
-            }
-        }
-
-        // ============================================
-        // УТИЛИТЫ
-        // ============================================
-        
-        function hapticFeedback(type) {
-            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
-                const feedback = window.Telegram.WebApp.HapticFeedback;
-                switch(type) {
-                    case 'light': feedback.impactOccurred('light'); break;
-                    case 'warning': feedback.notificationOccurred('warning'); break;
-                    case 'success': feedback.notificationOccurred('success'); break;
-                    case 'selection': feedback.selectionChanged(); break;
+                
+                if(window.Telegram && window.Telegram.WebApp.HapticFeedback) {
+                    window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
                 }
             }
         }
@@ -845,7 +766,7 @@
             
             if (navigator.clipboard) {
                 navigator.clipboard.writeText(link).then(() => {
-                    if (window.Telegram && window.Telegram.WebApp) {
+                    if(window.Telegram && window.Telegram.WebApp) {
                         window.Telegram.WebApp.showAlert('Ссылка скопирована!');
                     } else {
                         alert('Ссылка скопирована!');
@@ -858,4 +779,3 @@
     </script>
 </body>
 </html>
-
