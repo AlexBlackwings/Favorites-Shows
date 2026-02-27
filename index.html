@@ -49,29 +49,13 @@
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
         .delete-btn {
-            opacity: 0;
-            transition: opacity 0.2s, transform 0.2s, background-color 0.2s;
-            cursor: pointer;
-        }
-        @media (max-width: 768px) {
-            .delete-btn {
-                opacity: 1;
-            }
-        }
-        .list-item:hover .delete-btn {
             opacity: 1;
+            transition: transform 0.2s, background-color 0.2s;
+            cursor: pointer;
         }
         .delete-btn:active {
             transform: scale(0.9);
             background-color: rgba(220, 38, 38, 0.8) !important;
-        }
-
-        .source-badge {
-            font-size: 9px;
-            padding: 2px 6px;
-            border-radius: 4px;
-            background: rgba(59, 130, 246, 0.2);
-            color: #60a5fa;
         }
 
         .poster-container {
@@ -80,6 +64,8 @@
             overflow: hidden;
             flex-shrink: 0;
             border-radius: 12px;
+            width: 100px;
+            height: 140px;
         }
         .poster-container::before {
             content: '';
@@ -148,7 +134,7 @@
             background: rgba(255, 255, 255, 0.08);
             padding: 3px 8px;
             border-radius: 5px;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 4px;
             white-space: nowrap;
@@ -171,20 +157,30 @@
             text-overflow: ellipsis;
         }
 
-        /* Карточка - фиксированная высота по постеру */
+        /* Карточка - ГИБКАЯ вёрстка для мобильных */
         .list-item {
-            min-height: 156px;
-            height: auto;
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            background: #1a1a1a;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: 12px;
         }
-        
-        /* Контейнер контента */
-        .list-item-content {
+        .list-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Центральная колонка с информацией */
+        .info-column {
+            flex: 1;
+            min-width: 0;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
-            min-width: 0;
-            flex: 1;
-            padding: 8px 0;
+            justify-content: flex-start;
+            padding-top: 2px;
         }
 
         /* Название сериала */
@@ -193,11 +189,8 @@
             font-weight: 600;
             color: #ffffff;
             line-height: 1.3;
-            margin-bottom: 2px;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
+            margin-bottom: 4px;
+            word-break: break-word;
         }
 
         /* Правая колонка с рейтингом */
@@ -208,7 +201,7 @@
             justify-content: space-between;
             gap: 8px;
             flex-shrink: 0;
-            padding-left: 12px;
+            padding-left: 8px;
         }
     </style>
 </head>
@@ -243,7 +236,6 @@
 
     <main class="flex-1 overflow-y-auto pb-24">
         
-        <!-- Пустое состояние -->
         <div id="emptyState" class="flex flex-col items-center justify-center h-64 text-gray-500 text-center px-6 hidden">
             <div class="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
                 <svg class="w-8 h-8 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
@@ -251,11 +243,9 @@
             <p class="text-sm">Ваш список пуст.<br>Введите название сериала в поиск сверху.</p>
         </div>
 
-        <!-- Список сериалов (вертикальный) -->
-        <div id="showList" class="px-4 py-4 space-y-3">
+        <div id="showList" class="px-4 py-4">
         </div>
 
-        <!-- Блок профиля -->
         <div class="px-4 mt-4">
             <div class="bg-gradient-to-r from-gray-900 to-gray-800 border border-white/10 rounded-2xl p-4 flex items-center justify-between shadow-lg">
                 <div class="overflow-hidden">
@@ -278,7 +268,7 @@
             <div class="w-12 h-1.5 bg-gray-700 rounded-full mx-auto mb-6 opacity-50"></div>
             
             <div class="flex gap-5 mb-6">
-                <div class="poster-container w-28 h-40 flex-shrink-0 shadow-2xl border border-white/10">
+                <div class="poster-container w-28 h-40 flex-shrink-0 shadow-2xl border border-white/10" style="width: 112px; height: 160px;">
                     <img id="modalPoster" class="w-full h-full object-cover poster-img" src="" alt="Poster" onload="this.classList.add('loaded'); this.classList.remove('loading');" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'; this.classList.add('loaded');">
                 </div>
                 <div class="flex-1 flex flex-col justify-center">
@@ -296,7 +286,6 @@
                 </div>
             </div>
 
-            <!-- Поле оценки -->
             <div id="ratingInputContainer" class="mb-6 hidden bg-white/5 p-4 rounded-xl border border-white/5">
                 <label class="block text-xs text-gray-400 mb-2 font-medium">Ваша оценка</label>
                 <div class="flex gap-2">
@@ -305,7 +294,6 @@
                 </div>
             </div>
 
-            <!-- Впечатления -->
             <div class="mb-24 sm:mb-6">
                 <label class="block text-sm font-medium text-gray-300 mb-2">Ваши впечатления</label>
                 <textarea id="impressionsInput" rows="6" class="w-full glass-input rounded-xl p-4 text-sm resize-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="Напишите рецензию..."></textarea>
@@ -323,17 +311,12 @@
     </div>
 
     <script>
-        // ============================================
-        // 📺 БЕСПЛАТНЫЕ API (без ключей)
-        // ============================================
         const TVMAZE_BASE_URL = 'https://api.tvmaze.com';
         const OMDB_BASE_URL = 'https://www.omdbapi.com';
 
-        // Кэш изображений
         const IMAGE_CACHE_KEY = 'tma_image_cache';
         const IMAGE_CACHE_EXPIRY = 7 * 24 * 60 * 60 * 1000;
 
-        // Транслитерация
         const TRANSLITERATION = {
             'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
             'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
@@ -342,7 +325,6 @@
             'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
         };
 
-        // Словарь переводов
         const SHOW_TRANSLATIONS = {
             'ведьмак': 'The Witcher',
             'мандалорец': 'The Mandalorian',
@@ -408,6 +390,7 @@
             'бригада': 'Brigada',
             'локи': 'Loki',
             'силу': 'Silo',
+            'меня зовут эрл': 'My Name Is Earl',
             'слово пацана': 'Boys Word',
             'метод': 'Method',
             'содержанки': 'Keepers',
@@ -439,14 +422,12 @@
             'тайны следствия': 'Investigation Secrets'
         };
 
-        // --- Состояние приложения ---
         let state = {
             userId: null,
             shows: [],
             currentModalShowId: null
         };
 
-        // --- Инициализация ---
         document.addEventListener('DOMContentLoaded', () => {
             cleanImageCache();
 
@@ -473,10 +454,6 @@
             setupSearch();
         });
 
-        // ============================================
-        // 🚀 ОПТИМИЗАЦИЯ ИЗОБРАЖЕНИЙ
-        // ============================================
-        
         function getCachedImage(url) {
             try {
                 const cache = JSON.parse(localStorage.getItem(IMAGE_CACHE_KEY) || '{}');
@@ -558,7 +535,6 @@
             }
         }
 
-        // --- Логика Поиска ---
         function setupSearch() {
             const input = document.getElementById('searchInput');
             const resultsDiv = document.getElementById('searchResults');
@@ -843,7 +819,7 @@
 
             sortedShows.forEach(show => {
                 const item = document.createElement('div');
-                item.className = 'list-item bg-[#1a1a1a] rounded-xl overflow-hidden border border-white/5 flex items-stretch gap-3 p-3 hover:bg-white/5 transition-colors adding';
+                item.className = 'list-item adding';
                 item.setAttribute('data-show-id', show.id);
                 item.onclick = (e) => {
                     if (!e.target.closest('.delete-btn')) {
@@ -870,30 +846,25 @@
                     : '';
 
                 item.innerHTML = `
-                    <!-- Постер (слева) -->
-                    <div class="poster-container w-[100px] h-[140px] flex-shrink-0">
+                    <div class="poster-container">
                         <img src="${safePosterUrl}" class="w-full h-full object-cover poster-img" loading="lazy" onload="this.classList.add('loaded'); this.classList.remove('loading');" onerror="this.src='https://via.placeholder.com/200x280?text=No+Image'; this.classList.add('loaded');">
                     </div>
                     
-                    <!-- Информация (центр) -->
-                    <div class="list-item-content">
-                        <div>
-                            <h3 class="show-title">${show.title}</h3>
-                            ${originalTitleHtml}
-                            <div class="meta-info">
-                                ${yearRange ? `<span class="meta-tag">
-                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                                    ${yearRange}
-                                </span>` : ''}
-                                ${episodesText ? `<span class="meta-tag">
-                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path></svg>
-                                    ${episodesText}
-                                </span>` : ''}
-                            </div>
+                    <div class="info-column">
+                        <h3 class="show-title">${show.title}</h3>
+                        ${originalTitleHtml}
+                        <div class="meta-info">
+                            ${yearRange ? `<span class="meta-tag">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                ${yearRange}
+                            </span>` : ''}
+                            ${episodesText ? `<span class="meta-tag">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path></svg>
+                                ${episodesText}
+                            </span>` : ''}
                         </div>
                     </div>
                     
-                    <!-- Рейтинг и удаление (справа) -->
                     <div class="right-column">
                         <div class="rating-badge ${ratingClass}">
                             ${ratingDisplay}
@@ -1007,4 +978,3 @@
     </script>
 </body>
 </html>
-
