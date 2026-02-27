@@ -82,6 +82,7 @@
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
             position: relative;
             overflow: hidden;
+            flex-shrink: 0;
         }
         .poster-container::before {
             content: '';
@@ -138,30 +139,38 @@
             display: flex;
             flex-wrap: wrap;
             gap: 6px;
-            margin-top: 8px;
+            margin-top: 4px;
         }
         .meta-tag {
-            font-size: 11px;
+            font-size: 10px;
             color: #9ca3af;
             background: rgba(255, 255, 255, 0.05);
-            padding: 3px 8px;
-            border-radius: 6px;
+            padding: 2px 6px;
+            border-radius: 4px;
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 3px;
         }
         .meta-tag svg {
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             opacity: 0.7;
         }
 
         /* Оригинальное название */
         .original-title {
-            font-size: 12px;
+            font-size: 11px;
             color: #6b7280;
             font-weight: 400;
-            margin-top: 4px;
+            margin-top: 2px;
+        }
+
+        /* Карточка - фиксированная высота по постеру */
+        .list-item {
+            height: 156px; /* 140px poster + 16px padding */
+        }
+        .list-item-content {
+            height: 140px; /* match poster height */
         }
     </style>
 </head>
@@ -295,7 +304,7 @@
             'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
         };
 
-        // Словарь переводов (русское → английское оригинальное название)
+        // Словарь переводов
         const SHOW_TRANSLATIONS = {
             'ведьмак': 'The Witcher',
             'мандалорец': 'The Mandalorian',
@@ -324,8 +333,8 @@
             'озарк': 'Ozark',
             'корона': 'The Crown',
             'сексуальное воспитание': 'Sex Education',
-            'бумажный дом': 'La Casa de Papel',
-            'элита': 'Élite',
+            'бумажный дом': 'Money Heist',
+            'элита': 'Elite',
             'сверхъестественное': 'Supernatural',
             'клиник': 'Scrubs',
             'теория большого взрыва': 'The Big Bang Theory',
@@ -359,8 +368,8 @@
             'подпольная империя': 'Boardwalk Empire',
             'дедвуд': 'Deadwood',
             'слово пацана': 'Boys Word',
-            'метод': 'The Method',
-            'содержанки': 'The Keepers',
+            'метод': 'Method',
+            'содержанки': 'Keepers',
             'топи': 'Topi',
             'псих': 'Psychopath',
             'колл-центр': 'Call Center',
@@ -373,7 +382,7 @@
             'интерны': 'Interns',
             'воронины': 'Voronins',
             'сваты': 'Svaty',
-            'папины дочки': 'Daddy\'s Daughters',
+            'папины дочки': 'Daddy Daughters',
             'молодежка': 'Molodezhka',
             'кухня': 'Kitchen',
             'отель элеон': 'Hotel Eleon',
@@ -548,30 +557,6 @@
             return /[а-яё]/i.test(text);
         }
 
-        // Получить оригинальное название
-        function getOriginalTitle(title) {
-            const lowerTitle = title.toLowerCase();
-            
-            // Если название русское - ищем перевод в словаре
-            if (isRussian(title)) {
-                for (const [ru, en] of Object.entries(SHOW_TRANSLATIONS)) {
-                    if (lowerTitle.includes(ru)) {
-                        return en;
-                    }
-                }
-                return null;
-            }
-            
-            // Если название английское - ищем русский перевод
-            for (const [ru, en] of Object.entries(SHOW_TRANSLATIONS)) {
-                if (lowerTitle.includes(en.toLowerCase())) {
-                    return ru;
-                }
-            }
-            
-            return null;
-        }
-
         async function performSearch(query) {
             const resultsDiv = document.getElementById('searchResults');
             const loader = document.getElementById('searchLoader');
@@ -594,7 +579,7 @@
                     }
                 }
 
-                if (/[а-яё]/i.test(query)) {
+                if (isRussian(query)) {
                     searchTerms.push(transliterate(query));
                 }
 
@@ -663,7 +648,7 @@
                                 <span class="source-badge">${show.source}</span>
                             </div>
                         </div>
-                        <button ${disabled} onclick="addShowFromApi('${show.id}', '${show.title.replace(/'/g, "\\'")}', '${posterUrl}')" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-all whitespace-nowrap ${btnClass}">
+                        <button ${disabled} onclick="addShowFromApi('${show.id}', '${show.title.replace(/'/g, "\\'")}', '${show.originalTitle ? show.originalTitle.replace(/'/g, "\\'") : ''}', '${posterUrl}')" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-all whitespace-nowrap ${btnClass}">
                             ${btnText}
                         </button>
                     `;
@@ -700,10 +685,15 @@
                         posterUrl = item.show.image.original;
                     }
 
+                    // Определяем оригинальное и переведённое название
+                    const isRu = isRussian(item.show.name);
+                    const title = isRu ? item.show.name : (item.show.language === 'en' ? item.show.name : item.show.name);
+                    const originalTitle = item.show.language === 'en' && !isRu ? item.show.name : '';
+
                     return {
                         id: `tvmaze_${item.show.id}`,
-                        title: item.show.name,
-                        originalTitle: item.show.language !== 'ru' ? item.show.name : null,
+                        title: title,
+                        originalTitle: originalTitle,
                         year: item.show.premiered ? item.show.premiered.substring(0, 4) : '',
                         endYear: item.show.ended ? item.show.ended.substring(0, 4) : '',
                         episodes: item.show.episodes || 0,
@@ -728,7 +718,7 @@
                 .map((show, index) => ({
                     id: `omdb_${show.imdbID || index}_${Date.now()}`,
                     title: show.Title,
-                    originalTitle: null,
+                    originalTitle: show.Title,
                     year: show.Year,
                     endYear: '',
                     episodes: 0,
@@ -736,14 +726,12 @@
                 }));
         }
 
-        function addShowFromApi(id, title, posterUrl) {
+        function addShowFromApi(id, title, originalTitle, posterUrl) {
             if (!state.shows.find(s => s.id === id)) {
-                const originalTitle = getOriginalTitle(title);
-                
                 state.shows.push({
                     id: id,
                     title: title,
-                    originalTitle: originalTitle,
+                    originalTitle: originalTitle || '',
                     posterUrl: optimizeImageUrl(posterUrl),
                     rating: null,
                     impressions: '',
@@ -820,9 +808,13 @@
 
             sortedShows.forEach(show => {
                 const item = document.createElement('div');
-                // height-[140px] ограничивает высоту карточки высотой постера
-                item.className = 'list-item bg-[#1a1a1a] rounded-xl overflow-hidden border border-white/5 flex items-stretch gap-4 p-3 hover:bg-white/5 transition-colors adding h-[140px]';
+                item.className = 'list-item bg-[#1a1a1a] rounded-xl overflow-hidden border border-white/5 flex items-center gap-4 px-3 py-2 hover:bg-white/5 transition-colors adding cursor-pointer';
                 item.setAttribute('data-show-id', show.id);
+                item.onclick = (e) => {
+                    if (!e.target.closest('.delete-btn')) {
+                        openModal(show.id);
+                    }
+                };
                 
                 const ratingClass = getRatingClass(show.rating);
                 const ratingDisplay = show.rating !== null && show.rating !== undefined
@@ -839,37 +831,39 @@
                     ? `${show.episodes} серий` 
                     : '';
 
-                // Оригинальное название (если зарубежный сериал)
-                const originalTitleHtml = show.originalTitle 
-                    ? `<p class="original-title truncate">${show.originalTitle}</p>` 
+                // Оригинальное название (если зарубежный)
+                const originalTitleHtml = show.originalTitle && show.originalTitle !== show.title && !isRussian(show.title)
+                    ? `<p class="original-title truncate">${show.originalTitle}</p>`
                     : '';
 
                 item.innerHTML = `
                     <!-- Постер (слева) -->
-                    <div class="poster-container w-[100px] h-[140px] rounded-xl flex-shrink-0 overflow-hidden cursor-pointer" onclick="openModal('${show.id}')">
+                    <div class="poster-container w-[100px] h-[140px] rounded-xl flex-shrink-0 overflow-hidden">
                         <img src="${safePosterUrl}" class="w-full h-full object-cover poster-img" loading="lazy" onload="this.classList.add('loaded'); this.classList.remove('loading');" onerror="this.src='https://via.placeholder.com/200x280?text=No+Image'; this.classList.add('loaded');">
                     </div>
                     
-                    <!-- Информация (справа от постера, в одну строку по высоте) -->
-                    <div class="flex-1 flex flex-col justify-center py-1 cursor-pointer min-w-0" onclick="openModal('${show.id}')">
-                        <h3 class="font-bold text-base text-white leading-tight mb-1 line-clamp-2" title="${show.title}">${show.title}</h3>
-                        ${originalTitleHtml}
-                        
-                        <!-- Мета-информация: годы и серии -->
-                        <div class="meta-info">
-                            ${yearRange ? `<span class="meta-tag">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                                ${yearRange}
-                            </span>` : ''}
-                            ${episodesText ? `<span class="meta-tag">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path></svg>
-                                ${episodesText}
-                            </span>` : ''}
+                    <!-- Информация (справа от постера) -->
+                    <div class="list-item-content flex-1 flex flex-col justify-between py-1 min-w-0">
+                        <div class="min-h-0">
+                            <h3 class="font-bold text-sm text-white leading-tight mb-1 line-clamp-2" title="${show.title}">${show.title}</h3>
+                            ${originalTitleHtml}
+                            
+                            <!-- Мета-информация: годы и серии -->
+                            <div class="meta-info">
+                                ${yearRange ? `<span class="meta-tag">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                    ${yearRange}
+                                </span>` : ''}
+                                ${episodesText ? `<span class="meta-tag">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path></svg>
+                                    ${episodesText}
+                                </span>` : ''}
+                            </div>
                         </div>
                     </div>
                     
                     <!-- Рейтинг и удаление (справа) -->
-                    <div class="flex flex-col items-end gap-2 justify-center py-1">
+                    <div class="flex flex-col items-end gap-2 justify-between py-1 flex-shrink-0">
                         <div class="rating-badge ${ratingClass}">
                             ${ratingDisplay}
                         </div>
@@ -900,18 +894,10 @@
             posterImg.src = optimizeImageUrl(show.posterUrl);
             
             document.getElementById('modalTitle').innerText = show.title;
-            document.getElementById('modalOriginalTitle').innerText = show.originalTitle || '';
+            document.getElementById('modalOriginalTitle').innerText = show.originalTitle && show.originalTitle !== show.title ? show.originalTitle : '';
             document.getElementById('modalStudio').innerText = 'Сериал';
             document.getElementById('modalRatingDisplay').innerText = (show.rating !== null && show.rating !== undefined) ? show.rating.toFixed(1) : '--';
             document.getElementById('impressionsInput').value = show.impressions || '';
-            
-            // Показать/скрыть оригинальное название в модалке
-            const originalTitleEl = document.getElementById('modalOriginalTitle');
-            if (show.originalTitle) {
-                originalTitleEl.style.display = 'block';
-            } else {
-                originalTitleEl.style.display = 'none';
-            }
             
             document.getElementById('ratingInputContainer').classList.add('hidden');
             document.getElementById('detailModal').classList.remove('hidden');
