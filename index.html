@@ -89,7 +89,6 @@
         .poster-img.loading { opacity: 0.5; }
         .poster-img.loaded { opacity: 1; }
 
-        /* Рейтинг бейдж */
         .rating-badge {
             min-width: 44px;
             padding: 4px 8px;
@@ -104,13 +103,13 @@
         .rating-low { background: rgba(107, 114, 128, 0.2); color: #9ca3af; border: 1px solid rgba(107, 114, 128, 0.3); }
         .rating-none { background: rgba(255, 255, 255, 0.05); color: #6b7280; border: 1px solid rgba(255, 255, 255, 0.1); }
 
-        /* Анимация добавления/удаления */
         .list-item {
-            transition: all 0.3s ease;
+            margin-bottom: 12px;
         }
         .list-item.removing {
             transform: translateX(-100%);
             opacity: 0;
+            transition: all 0.3s ease;
         }
         .list-item.adding {
             animation: slideIn 0.3s ease-out;
@@ -120,7 +119,42 @@
             to { transform: translateX(0); opacity: 1; }
         }
 
-        /* Мета-информация */
+        /* 🔥 TABLE LAYOUT - работает ВЕЗДЕ */
+        .show-table {
+            display: table;
+            width: 100%;
+            background: #1a1a1a;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-collapse: separate;
+            border-spacing: 0;
+            overflow: hidden;
+        }
+        .show-row {
+            display: table-row;
+        }
+        .show-row:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .cell-poster {
+            display: table-cell;
+            width: 100px;
+            vertical-align: top;
+            padding: 12px;
+        }
+        .cell-info {
+            display: table-cell;
+            vertical-align: top;
+            padding: 12px 12px 12px 0;
+        }
+        .cell-actions {
+            display: table-cell;
+            width: 60px;
+            vertical-align: top;
+            padding: 12px 0 12px 12px;
+            text-align: right;
+        }
+
         .meta-info {
             display: flex;
             flex-wrap: wrap;
@@ -150,52 +184,6 @@
             color: #6b7280;
             font-weight: 400;
             margin-top: 2px;
-        }
-
-        /* 🔥 CSS GRID - надёжная вёрстка для Telegram */
-        .list-item {
-            display: grid;
-            grid-template-columns: 100px 1fr auto;
-            grid-template-rows: 140px;
-            gap: 12px;
-            padding: 12px;
-            background: #1a1a1a;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            margin-bottom: 12px;
-            align-items: start;
-        }
-        .list-item:hover {
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        /* Колонка 1: Постер */
-        .poster-cell {
-            grid-column: 1;
-            grid-row: 1;
-        }
-
-        /* Колонка 2: Информация */
-        .info-cell {
-            grid-column: 2;
-            grid-row: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            min-width: 0;
-            padding-top: 4px;
-        }
-
-        /* Колонка 3: Рейтинг + удаление */
-        .actions-cell {
-            grid-column: 3;
-            grid-row: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            justify-content: space-between;
-            gap: 8px;
-            padding-left: 8px;
         }
 
         .show-title {
@@ -271,7 +259,7 @@
             <div class="w-12 h-1.5 bg-gray-700 rounded-full mx-auto mb-6 opacity-50"></div>
             
             <div class="flex gap-5 mb-6">
-                <div class="poster-container w-28 h-40 flex-shrink-0 shadow-2xl border border-white/10">
+                <div class="poster-container flex-shrink-0">
                     <img id="modalPoster" class="w-full h-full object-cover poster-img" src="" alt="Poster" onload="this.classList.add('loaded'); this.classList.remove('loading');" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'; this.classList.add('loaded');">
                 </div>
                 <div class="flex-1 flex flex-col justify-center">
@@ -631,8 +619,7 @@
                     const year = show.year ? `(${show.year})` : '';
 
                     const btnText = exists ? 'В списке' : 'Добавить';
-                    const btnClass = exists ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-900/20';
-                    const disabled = exists ? 'disabled' : '';
+                    const btnClass = exists ? 'background:#374151;color:#9ca3af;cursor:not-allowed;' : 'background:#2563eb;color:white;';
 
                     const item = document.createElement('div');
                     item.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid rgba(255,255,255,0.05);';
@@ -644,7 +631,7 @@
                             <div style="font-weight:600;font-size:14px;color:#fff;margin-bottom:4px;">${show.title}</div>
                             <div style="font-size:11px;color:#9ca3af;">${year}</div>
                         </div>
-                        <button ${disabled} onclick="addShowFromApi('${show.id}', '${show.title.replace(/'/g, "\\'")}', '${show.originalTitle ? show.originalTitle.replace(/'/g, "\\'") : ''}', '${posterUrl}')" style="padding:6px 12px;border-radius:6px;font-size:11px;font-weight:700;text-transform:uppercase;${exists ? 'background:#374151;color:#9ca3af;' : 'background:#2563eb;color:white;'}">
+                        <button ${exists ? 'disabled' : ''} onclick="addShowFromApi('${show.id}', '${show.title.replace(/'/g, "\\'")}', '${show.originalTitle ? show.originalTitle.replace(/'/g, "\\'") : ''}', '${posterUrl}', '${show.year}', '${show.endYear}', '${show.episodes}')" style="padding:6px 12px;border-radius:6px;font-size:11px;font-weight:700;text-transform:uppercase;${btnClass}">
                             ${btnText}
                         </button>
                     `;
@@ -721,7 +708,8 @@
                 }));
         }
 
-        function addShowFromApi(id, title, originalTitle, posterUrl) {
+        // 🔥 ИСПРАВЛЕНО: Теперь передаём year, endYear, episodes
+        function addShowFromApi(id, title, originalTitle, posterUrl, year, endYear, episodes) {
             if (!state.shows.find(s => s.id === id)) {
                 state.shows.push({
                     id: id,
@@ -730,9 +718,9 @@
                     posterUrl: optimizeImageUrl(posterUrl),
                     rating: null,
                     impressions: '',
-                    year: '',
-                    endYear: '',
-                    episodes: 0
+                    year: year || '',
+                    endYear: endYear || '',
+                    episodes: episodes ? parseInt(episodes) : 0
                 });
                 saveUserData();
                 document.getElementById('searchInput').value = '';
@@ -801,11 +789,6 @@
                 const item = document.createElement('div');
                 item.className = 'list-item adding';
                 item.setAttribute('data-show-id', show.id);
-                item.onclick = (e) => {
-                    if (!e.target.closest('.delete-btn')) {
-                        openModal(show.id);
-                    }
-                };
                 
                 const ratingClass = getRatingClass(show.rating);
                 const ratingDisplay = show.rating !== null && show.rating !== undefined
@@ -825,37 +808,42 @@
                     ? `<p class="original-title">${show.originalTitle}</p>`
                     : '';
 
+                // 🔥 TABLE LAYOUT - работает везде
                 item.innerHTML = `
-                    <div class="poster-cell">
-                        <div class="poster-container">
-                            <img src="${safePosterUrl}" class="w-full h-full object-cover poster-img" loading="lazy" onload="this.classList.add('loaded'); this.classList.remove('loading');" onerror="this.src='https://via.placeholder.com/200x280?text=No+Image'; this.classList.add('loaded');">
+                    <div class="show-table" onclick="if(!event.target.closest('.delete-btn')) openModal('${show.id}')">
+                        <div class="show-row">
+                            <td class="cell-poster">
+                                <div class="poster-container">
+                                    <img src="${safePosterUrl}" class="w-full h-full object-cover poster-img" loading="lazy" onload="this.classList.add('loaded'); this.classList.remove('loading');" onerror="this.src='https://via.placeholder.com/200x280?text=No+Image'; this.classList.add('loaded');">
+                                </div>
+                            </td>
+                            <td class="cell-info">
+                                <h3 class="show-title">${show.title}</h3>
+                                ${originalTitleHtml}
+                                <div class="meta-info">
+                                    ${yearRange ? `<span class="meta-tag">
+                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                        ${yearRange}
+                                    </span>` : ''}
+                                    ${episodesText ? `<span class="meta-tag">
+                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path></svg>
+                                        ${episodesText}
+                                    </span>` : ''}
+                                </div>
+                            </td>
+                            <td class="cell-actions">
+                                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+                                    <div class="rating-badge ${ratingClass}">
+                                        ${ratingDisplay}
+                                    </div>
+                                    <button onclick="removeShow(event, '${show.id}')" class="delete-btn bg-black/60 hover:bg-red-600 text-white rounded-full p-2 backdrop-blur-sm transition-colors border border-white/10">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
                         </div>
-                    </div>
-                    
-                    <div class="info-cell">
-                        <h3 class="show-title">${show.title}</h3>
-                        ${originalTitleHtml}
-                        <div class="meta-info">
-                            ${yearRange ? `<span class="meta-tag">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                                ${yearRange}
-                            </span>` : ''}
-                            ${episodesText ? `<span class="meta-tag">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path></svg>
-                                ${episodesText}
-                            </span>` : ''}
-                        </div>
-                    </div>
-                    
-                    <div class="actions-cell">
-                        <div class="rating-badge ${ratingClass}">
-                            ${ratingDisplay}
-                        </div>
-                        <button onclick="removeShow(event, '${show.id}')" class="delete-btn bg-black/60 hover:bg-red-600 text-white rounded-full p-2 backdrop-blur-sm transition-colors border border-white/10">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
                     </div>
                 `;
                 container.appendChild(item);
