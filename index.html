@@ -3,162 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Series Manager</title>
+    <title>Series Tracker</title>
     <script src="https://telegram.org"></script>
     <style>
-        :root {
-            --bg: var(--tg-theme-bg-color, #ffffff);
-            --text: var(--tg-theme-text-color, #000000);
-            --hint: var(--tg-theme-hint-color, #999999);
-            --button: var(--tg-theme-button-color, #3390ec);
-            --button-text: var(--tg-theme-button-text-color, #ffffff);
-            --secondary-bg: var(--tg-theme-secondary-bg-color, #f4f4f5);
-        }
-        body { font-family: sans-serif; background: var(--secondary-bg); color: var(--text); margin: 0; padding-bottom: 80px; }
-        .container { padding: 15px; }
+        :root { --tg-bg: var(--tg-theme-bg-color, #fff); --tg-text: var(--tg-theme-text-color, #000); --accent: #3390ec; }
+        body { font-family: sans-serif; background: var(--tg-theme-secondary-bg-color, #f4f4f5); color: var(--tg-text); margin: 0; padding-bottom: 20px; }
         
-        /* Поиск/Добавление */
-        .search-box { position: sticky; top: 0; background: var(--bg); padding: 10px; border-bottom: 1px solid #ddd; z-index: 10; }
-        input, textarea { 
-            width: 100%; box-sizing: border-box; padding: 12px; border-radius: 10px; 
-            border: 1px solid #ccc; background: var(--bg); color: var(--text); margin-bottom: 8px;
-        }
+        /* Поиск */
+        .search-container { position: sticky; top: 0; background: var(--tg-bg); padding: 10px; z-index: 100; border-bottom: 1px solid #ddd; }
+        input { width: 100%; box-sizing: border-box; padding: 12px; border-radius: 10px; border: 1px solid #ccc; background: var(--tg-theme-secondary-bg-color); color: var(--tg-text); }
+        
+        /* Результаты поиска (выпадающий список) */
+        #search-results { position: absolute; width: calc(100% - 20px); background: var(--tg-bg); box-shadow: 0 5px 15px rgba(0,0,0,0.1); border-radius: 0 0 10px 10px; max-height: 300px; overflow-y: auto; display: none; }
+        .result-item { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; }
+        .result-item img { width: 40px; height: 60px; border-radius: 4px; object-fit: cover; margin-right: 12px; }
+        .result-info { font-size: 14px; line-height: 1.2; }
 
-        /* Список */
-        .series-card {
-            display: flex; background: var(--bg); border-radius: 12px; 
-            margin-bottom: 12px; padding: 10px; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        .poster { width: 50px; height: 75px; background: #eee; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
-        .info { flex-grow: 1; margin: 0 15px; overflow: hidden; }
-        .title { font-weight: bold; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .sub-title { font-size: 13px; color: var(--hint); }
-        .rating-num { font-weight: bold; color: var(--button); font-size: 15px; }
+        /* Основной список пользователя */
+        .my-list { padding: 10px; }
+        .card { display: flex; background: var(--tg-bg); border-radius: 12px; margin-bottom: 10px; padding: 10px; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .card img { width: 60px; height: 90px; border-radius: 8px; object-fit: cover; }
+        .card-content { flex-grow: 1; margin-left: 15px; }
+        .card-title { font-weight: bold; font-size: 16px; margin-bottom: 4px; }
+        .card-sub { font-size: 12px; color: #888; }
+        .card-rating { font-weight: bold; color: var(--accent); font-size: 14px; background: #eef6ff; padding: 4px 8px; border-radius: 6px; }
 
-        /* Модалка */
-        #modal { 
-            display: none; position: fixed; top:0; left:0; width:100%; height:100%; 
-            background: rgba(0,0,0,0.6); z-index: 100; backdrop-filter: blur(2px);
-        }
-        .modal-body { background: var(--bg); margin: 15% auto; width: 85%; padding: 20px; border-radius: 16px; }
-        .btn { 
-            background: var(--button); color: var(--button-text); border: none; 
-            padding: 12px; width: 100%; border-radius: 10px; font-weight: bold; cursor: pointer;
-        }
-        .hidden { display: none !important; }
+        /* Модальное окно */
+        #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+        .modal-box { background: var(--tg-bg); margin: 20% auto; width: 85%; padding: 20px; border-radius: 15px; }
+        textarea { width: 100%; height: 100px; margin: 10px 0; border-radius: 8px; border: 1px solid #ccc; padding: 8px; box-sizing: border-box; }
+        .btn { background: var(--accent); color: #fff; border: none; padding: 12px; width: 100%; border-radius: 10px; font-weight: bold; margin-top: 5px; }
     </style>
 </head>
 <body>
 
-<div class="search-box" id="editorHeader">
-    <input type="text" id="addName" placeholder="Название (рус)">
-    <input type="text" id="addEng" placeholder="Название (eng)">
-    <input type="text" id="addPoster" placeholder="Ссылка на постер (URL)">
-    <button class="btn" onclick="addNewSeries()">Добавить в список</button>
+<div class="search-container">
+    <input type="text" id="searchInput" placeholder="Поиск сериалов (напр. 'Во все тяжкие')">
+    <div id="search-results"></div>
 </div>
 
-<div class="container" id="mainList"></div>
+<div class="my-list" id="mainList">
+    <!-- Сериалы появятся здесь -->
+</div>
 
 <div id="modal">
-    <div class="modal-body">
-        <h3 id="mTitle">Название</h3>
-        <p id="mEng" style="color:var(--hint); margin-top:-10px"></p>
-        <label>Оценка (0-10):</label>
+    <div class="modal-box">
+        <h3 id="mTitle"></h3>
+        <label>Ваша оценка (0-10):</label>
         <input type="number" id="mRate" step="0.01" min="0" max="10">
-        <textarea id="mReview" placeholder="Твои впечатления..."></textarea>
-        <button class="btn" id="saveBtn" onclick="saveEdit()">Сохранить</button>
-        <button class="btn" style="background:transparent; color:red; margin-top:5px" id="delBtn" onclick="deleteItem()">Удалить</button>
-        <button class="btn" style="background:#888; margin-top:5px" onclick="closeModal()">Закрыть</button>
+        <textarea id="mReview" placeholder="Ваши мысли о сериале..."></textarea>
+        <button class="btn" onclick="saveData()">Сохранить</button>
+        <button class="btn" style="background:#888" onclick="closeModal()">Закрыть</button>
+        <button class="btn" style="background:transparent; color:red" onclick="deleteItem()">Удалить из списка</button>
     </div>
 </div>
 
 <script>
     const tg = window.Telegram.WebApp;
-    tg.ready();
-    tg.expand();
+    const API_KEY = 'ВАШ_API_КЛЮЧ'; // <--- ЗАМЕНИТЕ НА СВОЙ
+    let mySeries = JSON.parse(localStorage.getItem('user_series') || '[]');
+    let currentIdx = null;
 
-    // Логика профиля: если в ссылке есть ?user=... значит это чужой профиль (только чтение)
-    const urlParams = new URLSearchParams(window.location.search);
-    const viewUserId = urlParams.get('user');
-    const myId = tg.initDataUnsafe?.user?.id || 'local_user';
-    const isOwner = !viewUserId || viewUserId == myId;
+    tg.ready(); tg.expand();
+    render();
 
-    let data = JSON.parse(localStorage.getItem('series_db_' + (viewUserId || myId)) || '[]');
-    let currentId = null;
+    // Автоматический поиск при вводе
+    document.getElementById('searchInput').addEventListener('input', async (e) => {
+        const query = e.target.value;
+        const resBox = document.getElementById('search-results');
+        if (query.length < 3) { resBox.style.display = 'none'; return; }
 
-    if (!isOwner) document.getElementById('editorHeader').classList.add('hidden');
+        try {
+            const response = await fetch(`https://kinopoiskapiunofficial.tech{encodeURIComponent(query)}`, {
+                headers: { 'X-API-KEY': API_KEY, 'Content-Type': 'application/json' }
+            });
+            const data = await response.json();
+            
+            resBox.innerHTML = data.films.slice(0, 6).map(f => `
+                <div class="result-item" onclick="addSeries('${f.filmId}', '${f.nameRu || f.nameEn}', '${f.nameEn || ''}', '${f.posterUrlPreview}')">
+                    <img src="${f.posterUrlPreview}">
+                    <div class="result-info">
+                        <strong>${f.nameRu || f.nameEn}</strong><br>
+                        <small>${f.year} | ${f.nameEn || ''}</small>
+                    </div>
+                </div>
+            `).join('');
+            resBox.style.display = 'block';
+        } catch (e) { console.error("Ошибка API:", e); }
+    });
+
+    function addSeries(id, name, eng, poster) {
+        if (!mySeries.find(s => s.id == id)) {
+            mySeries.push({ id, name, eng, poster, rating: "0.00", review: "" });
+            save();
+        }
+        document.getElementById('search-results').style.display = 'none';
+        document.getElementById('searchInput').value = '';
+    }
 
     function render() {
         const list = document.getElementById('mainList');
-        list.innerHTML = data.map((s, idx) => `
-            <div class="series-card" onclick="openModal(${idx})">
-                <img class="poster" src="${s.poster || 'https://via.placeholder.com?'}" alt="">
-                <div class="info">
-                    <div class="title">${s.name}</div>
-                    <div class="sub-title">${s.eng}</div>
+        list.innerHTML = mySeries.map((s, idx) => `
+            <div class="card" onclick="openModal(${idx})">
+                <img src="${s.poster}">
+                <div class="card-content">
+                    <div class="card-title">${s.name}</div>
+                    <div class="card-sub">${s.eng}</div>
                 </div>
-                <div class="rating-num">${parseFloat(s.rating).toFixed(2)}</div>
+                <div class="card-rating">${s.rating}</div>
             </div>
         `).join('');
     }
 
-    function addNewSeries() {
-        const name = document.getElementById('addName').value;
-        const eng = document.getElementById('addEng').value;
-        const poster = document.getElementById('addPoster').value;
-        if (!name) return alert('Введите название');
-        
-        data.push({ name, eng, poster, rating: 0, review: "" });
-        save();
-        document.querySelectorAll('.search-box input').forEach(i => i.value = '');
-    }
-
     function openModal(idx) {
-        currentId = idx;
-        const s = data[idx];
+        currentIdx = idx;
+        const s = mySeries[idx];
         document.getElementById('mTitle').innerText = s.name;
-        document.getElementById('mEng').innerText = s.eng;
         document.getElementById('mRate').value = s.rating;
         document.getElementById('mReview').value = s.review;
-
-        // Только хозяин может редактировать
-        document.getElementById('mRate').readOnly = !isOwner;
-        document.getElementById('mReview').readOnly = !isOwner;
-        if(!isOwner) {
-            document.getElementById('saveBtn').classList.add('hidden');
-            document.getElementById('delBtn').classList.add('hidden');
-        }
-
         document.getElementById('modal').style.display = 'block';
     }
 
     function closeModal() { document.getElementById('modal').style.display = 'none'; }
 
-    function saveEdit() {
-        if (!isOwner) return;
-        data[currentId].rating = parseFloat(document.getElementById('mRate').value || 0).toFixed(2);
-        data[currentId].review = document.getElementById('mReview').value;
-        save();
-        closeModal();
+    function saveData() {
+        mySeries[currentIdx].rating = parseFloat(document.getElementById('mRate').value || 0).toFixed(2);
+        mySeries[currentIdx].review = document.getElementById('mReview').value;
+        save(); closeModal();
     }
 
     function deleteItem() {
-        if (!isOwner || !confirm('Удалить из списка?')) return;
-        data.splice(currentId, 1);
-        save();
-        closeModal();
+        if(confirm("Удалить?")) { mySeries.splice(currentIdx, 1); save(); closeModal(); }
     }
 
     function save() {
-        localStorage.setItem('series_db_' + myId, JSON.stringify(data));
+        localStorage.setItem('user_series', JSON.stringify(mySeries));
         render();
     }
-
-    // Ссылка для "Поделиться"
-    const shareLink = `https://t.me{tg.initDataUnsafe?.bot_inline_placeholder || 'your_bot'}/app?startapp=${myId}`;
-    console.log("Ваша ссылка профиля:", shareLink);
-
-    render();
 </script>
 </body>
 </html>
