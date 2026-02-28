@@ -2,127 +2,949 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Series App</title>
-    <script src="https://telegram.org"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MySeries Tracker</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: var(--tg-theme-bg-color, #fff); --text: var(--tg-theme-text-color, #000); --accent: #3390ec; --sec: var(--tg-theme-secondary-bg-color, #f4f4f5); }
-        body { font-family: sans-serif; background: var(--sec); color: var(--text); margin: 0; padding: 0; }
-        .search-row { position: sticky; top: 0; background: var(--bg); padding: 12px; display: flex; gap: 8px; z-index: 100; border-bottom: 1px solid #ddd; }
-        input { flex-grow: 1; padding: 12px; border-radius: 10px; border: 1px solid #ccc; background: var(--sec); color: var(--text); font-size: 16px; }
-        .search-btn { background: var(--accent); color: #fff; border: none; padding: 0 15px; border-radius: 10px; font-weight: bold; }
-        #results { position: absolute; top: 60px; left: 12px; right: 12px; background: var(--bg); border-radius: 0 0 15px 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); display: none; max-height: 300px; overflow-y: auto; }
-        .res-item { display: flex; padding: 10px; border-bottom: 1px solid #eee; align-items: center; cursor: pointer; }
-        .res-item img { width: 40px; height: 55px; border-radius: 4px; object-fit: cover; margin-right: 12px; }
-        .my-list { padding: 12px; }
-        .card { display: flex; background: var(--bg); border-radius: 15px; margin-bottom: 10px; padding: 10px; align-items: center; }
-        .card img { width: 60px; height: 90px; border-radius: 8px; object-fit: cover; }
-        .card-body { flex-grow: 1; margin: 0 15px; }
-        .card-title { font-weight: bold; font-size: 16px; }
-        .card-rate { color: var(--accent); font-weight: 800; font-size: 14px; }
-        #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; }
-        .modal-win { background: var(--bg); margin: 15% auto; width: 85%; padding: 20px; border-radius: 20px; }
-        textarea { width: 100%; height: 100px; margin: 10px 0; border-radius: 10px; padding: 10px; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f0f0f;
+            color: #ffffff;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes slideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-backdrop { background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px); }
+
+        .glass-input {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        .glass-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .loader {
+            border: 3px solid rgba(255,255,255,0.1);
+            border-left-color: #3b82f6;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .delete-btn {
+            opacity: 1;
+            transition: transform 0.2s, background-color 0.2s;
+            cursor: pointer;
+        }
+        .delete-btn:active {
+            transform: scale(0.9);
+            background-color: rgba(220, 38, 38, 0.8) !important;
+        }
+
+        .poster-container {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+            width: 100px;
+            height: 140px;
+        }
+        .poster-container::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(45deg, #1a1a2e 25%, #16213e 25%, #16213e 50%, #1a1a2e 50%, #1a1a2e 75%, #16213e 75%, #16213e 100%);
+            background-size: 20px 20px;
+            opacity: 0.3;
+            animation: shimmer 1.5s infinite;
+        }
+        @keyframes shimmer {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(20px); }
+        }
+
+        .poster-img {
+            transition: opacity 0.3s ease;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .poster-img.loading { opacity: 0.5; }
+        .poster-img.loaded { opacity: 1; }
+
+        .rating-badge {
+            min-width: 44px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 13px;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .rating-high { background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); }
+        .rating-med { background: rgba(234, 179, 8, 0.2); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.3); }
+        .rating-low { background: rgba(107, 114, 128, 0.2); color: #9ca3af; border: 1px solid rgba(107, 114, 128, 0.3); }
+        .rating-none { background: rgba(255, 255, 255, 0.05); color: #6b7280; border: 1px solid rgba(255, 255, 255, 0.1); }
+
+        .list-item {
+            margin-bottom: 12px;
+        }
+        .list-item.removing {
+            transform: translateX(-100%);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        .list-item.adding {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* 🔥 TABLE LAYOUT - работает ВЕЗДЕ */
+        .show-table {
+            display: table;
+            width: 100%;
+            background: #1a1a1a;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-collapse: separate;
+            border-spacing: 0;
+            overflow: hidden;
+        }
+        .show-row {
+            display: table-row;
+        }
+        .show-row:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .cell-poster {
+            display: table-cell;
+            width: 100px;
+            vertical-align: top;
+            padding: 12px;
+        }
+        .cell-info {
+            display: table-cell;
+            vertical-align: top;
+            padding: 12px 12px 12px 0;
+        }
+        .cell-actions {
+            display: table-cell;
+            width: 60px;
+            vertical-align: top;
+            padding: 12px 0 12px 12px;
+            text-align: right;
+        }
+
+        .meta-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+        }
+        .meta-tag {
+            font-size: 11px;
+            color: #9ca3af;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 3px 8px;
+            border-radius: 5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+        .meta-tag svg {
+            width: 11px;
+            height: 11px;
+            opacity: 0.7;
+            flex-shrink: 0;
+        }
+
+        .original-title {
+            font-size: 11px;
+            color: #6b7280;
+            font-weight: 400;
+            margin-top: 2px;
+        }
+
+        .show-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #ffffff;
+            line-height: 1.3;
+            margin-bottom: 4px;
+            word-break: break-word;
+        }
     </style>
 </head>
-<body>
+<body class="h-screen flex flex-col">
 
-<div class="search-row">
-    <input type="text" id="q" placeholder="Название (English)..." enterkeyhint="search">
-    <button class="search-btn" onclick="doSearch()">Найти</button>
-    <div id="results"></div>
-</div>
-
-<div class="my-list" id="list"></div>
-
-<div id="modal">
-    <div class="modal-win">
-        <h2 id="mT" style="margin:0"></h2>
-        <input type="number" id="mR" step="0.01" min="0" max="10" placeholder="Ваша оценка">
-        <textarea id="mE" placeholder="Отзыв..."></textarea>
-        <button style="width:100%; background:var(--accent); color:#fff; padding:12px; border:none; border-radius:10px;" onclick="save()">Сохранить</button>
-        <button style="width:100%; background:none; border:none; color:red; margin-top:10px;" onclick="closeM()">Закрыть</button>
-    </div>
-</div>
-
-<script>
-    const tg = window.Telegram.WebApp;
-    let myS = JSON.parse(localStorage.getItem('serials_db') || '[]');
-    let cur = null;
-
-    tg.ready(); tg.expand();
-    render();
-
-    async function doSearch() {
-        const val = document.getElementById('q').value.trim();
-        const resDiv = document.getElementById('results');
-        if (!val) return;
-
-        resDiv.style.display = 'block';
-        resDiv.innerHTML = '<div style="padding:15px; color:#888;">Ищем...</div>';
-
-        try {
-            const r = await fetch(`https://api.tvmaze.com{encodeURIComponent(val)}`);
-            const data = await r.json();
-            
-            if (data.length === 0) {
-                resDiv.innerHTML = '<div style="padding:15px; color:#888;">Ничего не нашли</div>';
-            } else {
-                resDiv.innerHTML = data.map(i => `
-                    <div class="res-item" onclick="add('${i.show.id}', '${i.show.name.replace(/'/g,"")}', '${i.show.image ? i.show.image.medium : ""}')">
-                        <img src="${i.show.image ? i.show.image.medium : "https://via.placeholder.com"}">
-                        <div><b>${i.show.name}</b></div>
-                    </div>
-                `).join('');
-            }
-        } catch (e) {
-            resDiv.innerHTML = '<div style="padding:15px; color:red;">Ошибка связи с API</div>';
-        }
-    }
-
-    function add(id, name, img) {
-        if (!myS.find(x => x.id == id)) {
-            myS.push({ id, name, img, rating: "0.00", review: "" });
-            localStorage.setItem('serials_db', JSON.stringify(myS));
-            render();
-        }
-        document.getElementById('results').style.display = 'none';
-        document.getElementById('q').value = '';
-    }
-
-    function render() {
-        const list = document.getElementById('list');
-        if (myS.length === 0) {
-            list.innerHTML = '<p style="text-align:center; color:#888; margin-top:50px;">Ваш список пуст</p>';
-            return;
-        }
-        list.innerHTML = myS.map((s, i) => `
-            <div class="card" onclick="openM(${i})">
-                <img src="${s.img || "https://via.placeholder.com"}">
-                <div class="card-body">
-                    <div class="card-title">${s.name}</div>
-                    <div class="card-rate">★ ${s.rating}</div>
+    <header class="p-4 sticky top-0 z-20 bg-[#0f0f0f]/95 backdrop-blur-md border-b border-white/5 shadow-lg">
+        <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-purple-600 flex items-center justify-center text-sm font-bold shadow-lg shadow-blue-900/50" id="userAvatar">U</div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight text-white">Мои Сериалы</h1>
+                    <p class="text-[10px] text-gray-500" id="showCount">0 сериалов</p>
                 </div>
             </div>
-        `).join('');
-    }
+            <button onclick="clearAllData()" class="text-xs text-gray-500 hover:text-red-400 transition-colors">
+                Сброс
+            </button>
+        </div>
+        
+        <div class="relative">
+            <input type="text" id="searchInput" placeholder="Поиск (Ведьмак, Mandalorian...)..." 
+                class="w-full glass-input rounded-xl pl-4 pr-10 py-3 text-sm placeholder-gray-500 transition-all shadow-inner">
+            
+            <div id="searchLoader" class="absolute right-3 top-3 hidden">
+                <div class="loader"></div>
+            </div>
 
-    function openM(i) {
-        cur = i;
-        document.getElementById('mT').innerText = myS[i].name;
-        document.getElementById('mR').value = myS[i].rating;
-        document.getElementById('mE').value = myS[i].review;
-        document.getElementById('modal').style.display = 'block';
-    }
+            <div id="searchResults" class="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl max-h-64 overflow-y-auto z-50 hidden">
+            </div>
+        </div>
+    </header>
 
-    function closeM() { document.getElementById('modal').style.display = 'none'; }
+    <main class="flex-1 overflow-y-auto pb-24">
+        
+        <div id="emptyState" class="flex flex-col items-center justify-center h-64 text-gray-500 text-center px-6 hidden">
+            <div class="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
+                <svg class="w-8 h-8 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+            </div>
+            <p class="text-sm">Ваш список пуст.<br>Введите название сериала в поиск сверху.</p>
+        </div>
 
-    function save() {
-        myS[cur].rating = parseFloat(document.getElementById('mR').value || 0).toFixed(2);
-        myS[cur].review = document.getElementById('mE').value;
-        localStorage.setItem('serials_db', JSON.stringify(myS));
-        render(); closeM();
-    }
-</script>
+        <div id="showList" class="px-4 py-4">
+        </div>
+
+        <div class="px-4 mt-4">
+            <div class="bg-gradient-to-r from-gray-900 to-gray-800 border border-white/10 rounded-2xl p-4 flex items-center justify-between shadow-lg">
+                <div class="overflow-hidden">
+                    <p class="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Ваша ссылка</p>
+                    <p class="text-xs text-blue-400 truncate font-mono" id="profileLinkDisplay">Загрузка...</p>
+                </div>
+                <button onclick="shareProfile()" class="bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all text-white px-4 py-2 rounded-lg text-xs font-bold shadow-lg shadow-blue-900/30">
+                    Поделиться
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Модальное окно -->
+    <div id="detailModal" class="fixed inset-0 z-50 hidden">
+        <div class="modal-backdrop absolute inset-0" onclick="closeModal()"></div>
+        
+        <div class="absolute bottom-0 left-0 right-0 bg-[#1a1a1a] rounded-t-3xl p-6 max-h-[85vh] overflow-y-auto slide-up border-t border-white/10">
+            
+            <div class="w-12 h-1.5 bg-gray-700 rounded-full mx-auto mb-6 opacity-50"></div>
+            
+            <div class="flex gap-5 mb-6">
+                <div class="poster-container flex-shrink-0">
+                    <img id="modalPoster" class="w-full h-full object-cover poster-img" src="" alt="Poster" onload="this.classList.add('loaded'); this.classList.remove('loading');" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'; this.classList.add('loaded');">
+                </div>
+                <div class="flex-1 flex flex-col justify-center">
+                    <h2 id="modalTitle" class="text-xl font-bold text-white leading-tight mb-1"></h2>
+                    <p id="modalOriginalTitle" class="text-sm text-gray-500 mb-2"></p>
+                    <p id="modalStudio" class="text-sm text-gray-400 mb-4 line-clamp-2"></p>
+                    
+                    <div class="flex items-center gap-3 mt-auto">
+                        <div class="bg-green-500/10 text-green-400 px-3 py-1.5 rounded-lg text-sm font-bold border border-green-500/20 flex items-center gap-1">
+                            <span id="modalRatingDisplay">--</span> 
+                            <span class="text-xs opacity-60">/ 10</span>
+                        </div>
+                        <button onclick="enableEditRating()" class="text-xs text-gray-400 hover:text-white underline decoration-gray-600 underline-offset-2">Оценить</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="ratingInputContainer" class="mb-6 hidden bg-white/5 p-4 rounded-xl border border-white/5">
+                <label class="block text-xs text-gray-400 mb-2 font-medium">Ваша оценка</label>
+                <div class="flex gap-2">
+                    <input type="number" id="ratingInput" step="0.1" min="0" max="10" class="glass-input w-full px-3 py-2 rounded-lg text-sm font-mono" placeholder="0.0 - 10.0">
+                    <button onclick="saveRating()" class="bg-green-600 hover:bg-green-500 text-white px-4 rounded-lg text-sm font-bold transition-colors">OK</button>
+                </div>
+            </div>
+
+            <div class="mb-24 sm:mb-6">
+                <label class="block text-sm font-medium text-gray-300 mb-2">Ваши впечатления</label>
+                <textarea id="impressionsInput" rows="6" class="w-full glass-input rounded-xl p-4 text-sm resize-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="Напишите рецензию..."></textarea>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button onclick="saveImpressions()" class="flex-1 bg-white text-black py-3.5 rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors">
+                    Сохранить
+                </button>
+                <button onclick="closeModal()" class="flex-1 bg-gray-800 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-gray-700 transition-colors">
+                    Закрыть
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const TVMAZE_BASE_URL = 'https://api.tvmaze.com';
+        const OMDB_BASE_URL = 'https://www.omdbapi.com';
+
+        const IMAGE_CACHE_KEY = 'tma_image_cache';
+        const IMAGE_CACHE_EXPIRY = 7 * 24 * 60 * 60 * 1000;
+
+        const TRANSLITERATION = {
+            'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
+            'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+            'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+            'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch',
+            'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
+        };
+
+        const SHOW_TRANSLATIONS = {
+            'ведьмак': 'The Witcher',
+            'мандалорец': 'The Mandalorian',
+            'сыны анархии': 'Sons of Anarchy',
+            'женщина халк': 'She-Hulk',
+            'во все тяжкие': 'Breaking Bad',
+            'лучше звоните солу': 'Better Call Saul',
+            'очень странные дела': 'Stranger Things',
+            'игра престолов': 'Game of Thrones',
+            'дом дракона': 'House of the Dragon',
+            'чернобыль': 'Chernobyl',
+            'тьма': 'Dark',
+            'офис': 'The Office',
+            'друзья': 'Friends',
+            'шерлок': 'Sherlock',
+            'рик и морти': 'Rick and Morty',
+            'игра в кальмара': 'Squid Game',
+            'эйфория': 'Euphoria',
+            'острые козырьки': 'Peaky Blinders',
+            'черное зеркало': 'Black Mirror',
+            'наследники': 'Succession',
+            'пацаны': 'The Boys',
+            'уэнсдей': 'Wednesday',
+            'аркейн': 'Arcane',
+            'академия амбрелла': 'The Umbrella Academy',
+            'озарк': 'Ozark',
+            'корона': 'The Crown',
+            'сексуальное воспитание': 'Sex Education',
+            'бумажный дом': 'Money Heist',
+            'элита': 'Elite',
+            'сверхъестественное': 'Supernatural',
+            'клиник': 'Scrubs',
+            'теория большого взрыва': 'The Big Bang Theory',
+            'как я встретил вашу маму': 'How I Met Your Mother',
+            'бруклин 99': 'Brooklyn Nine-Nine',
+            'ход мертвецов': 'The Walking Dead',
+            'lost': 'Lost',
+            'остаться в живых': 'Lost',
+            'доктор кто': 'Doctor Who',
+            'секретные материалы': 'The X-Files',
+            'звездный путь': 'Star Trek',
+            'звездные войны': 'Star Wars',
+            'бригада': 'Brigada',
+            'локи': 'Loki',
+            'силу': 'Silo',
+            'меня зовут эрл': 'My Name Is Earl',
+            'слово пацана': 'Boys Word',
+            'метод': 'Method',
+            'содержанки': 'Keepers',
+            'топи': 'Topi',
+            'псих': 'Psychopath',
+            'колл-центр': 'Call Center',
+            'чикатило': 'Chikatilo',
+            'триггер': 'Trigger',
+            'мажор': 'Major',
+            'физрук': 'Physruk',
+            'универ': 'Univers',
+            'реальные пацаны': 'Real Guys',
+            'интерны': 'Interns',
+            'воронины': 'Voronins',
+            'сваты': 'Svaty',
+            'папины дочки': 'Daddy Daughters',
+            'молодежка': 'Molodezhka',
+            'кухня': 'Kitchen',
+            'отель элеон': 'Hotel Eleon',
+            'ивановы-ивановы': 'Ivanovs',
+            'полицейский с рублевки': 'Policeman from Rublevka',
+            'моя прекрасная няня': 'My Fair Nanny',
+            'не родись красивой': 'Do Not Be Born Beautiful',
+            'бедная настя': 'Poor Nastya',
+            'каменская': 'Kamenskaya',
+            'бандитский петербург': 'Bandit Petersburg',
+            'улицы разбитых фонарей': 'Streets of Broken Lights',
+            'менты': 'Cops',
+            'тайны следствия': 'Investigation Secrets'
+        };
+
+        let state = {
+            userId: null,
+            shows: [],
+            currentModalShowId: null
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            cleanImageCache();
+
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.ready();
+                window.Telegram.WebApp.expand();
+                
+                const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
+                if (tgUser && tgUser.id) {
+                    state.userId = 'tg_' + tgUser.id;
+                } else {
+                    state.userId = 'web_' + Math.random().toString(36).substr(2, 9);
+                }
+            } else {
+                state.userId = 'web_' + Math.random().toString(36).substr(2, 9);
+            }
+            
+            loadUserData();
+            
+            document.getElementById('userAvatar').innerText = state.userId.slice(4, 6).toUpperCase();
+            document.getElementById('profileLinkDisplay').innerText = `t.me/app?startapp=${state.userId}`;
+            
+            renderShowList();
+            setupSearch();
+        });
+
+        function getCachedImage(url) {
+            try {
+                const cache = JSON.parse(localStorage.getItem(IMAGE_CACHE_KEY) || '{}');
+                const cached = cache[url];
+                if (cached && Date.now() - cached.timestamp < IMAGE_CACHE_EXPIRY) {
+                    return cached.url;
+                }
+            } catch (e) { console.warn('Cache read error:', e); }
+            return null;
+        }
+
+        function cacheImage(originalUrl, optimizedUrl) {
+            try {
+                const cache = JSON.parse(localStorage.getItem(IMAGE_CACHE_KEY) || '{}');
+                cache[originalUrl] = { url: optimizedUrl, timestamp: Date.now() };
+                const keys = Object.keys(cache);
+                if (keys.length > 100) {
+                    keys.slice(0, keys.length - 100).forEach(key => delete cache[key]);
+                }
+                localStorage.setItem(IMAGE_CACHE_KEY, JSON.stringify(cache));
+            } catch (e) { console.warn('Cache write error:', e); }
+        }
+
+        function cleanImageCache() {
+            try {
+                const cache = JSON.parse(localStorage.getItem(IMAGE_CACHE_KEY) || '{}');
+                const now = Date.now();
+                Object.keys(cache).forEach(key => {
+                    if (now - cache[key].timestamp > IMAGE_CACHE_EXPIRY) {
+                        delete cache[key];
+                    }
+                });
+                localStorage.setItem(IMAGE_CACHE_KEY, JSON.stringify(cache));
+            } catch (e) { console.warn('Cache clean error:', e); }
+        }
+
+        function optimizeImageUrl(url) {
+            if (!url || url.includes('placeholder')) return url;
+            
+            const cached = getCachedImage(url);
+            if (cached) return cached;
+
+            let optimized = url;
+            
+            if (url.includes('tvmaze.com')) {
+                optimized = url.replace('/original/', '/medium/');
+            } else if (url.includes('imdb.com') || url.includes('omdbapi.com')) {
+                optimized = url.replace('_V1_.jpg', '_V1_SX300.jpg');
+            }
+            
+            optimized = optimized.replace('.png', '.jpg');
+            
+            if (optimized !== url) {
+                cacheImage(url, optimized);
+            }
+            
+            return optimized;
+        }
+
+        function loadUserData() {
+            const storageKey = `tma_shows_${state.userId}`;
+            const saved = localStorage.getItem(storageKey);
+            state.shows = saved ? JSON.parse(saved) : [];
+        }
+
+        function saveUserData() {
+            const storageKey = `tma_shows_${state.userId}`;
+            localStorage.setItem(storageKey, JSON.stringify(state.shows));
+            renderShowList();
+        }
+
+        function clearAllData() {
+            if(confirm('Удалить весь список сериалов?')) {
+                state.shows = [];
+                saveUserData();
+                if(window.Telegram && window.Telegram.WebApp.HapticFeedback) {
+                    window.Telegram.WebApp.HapticFeedback.notificationOccurred('warning');
+                }
+            }
+        }
+
+        function setupSearch() {
+            const input = document.getElementById('searchInput');
+            const resultsDiv = document.getElementById('searchResults');
+            const loader = document.getElementById('searchLoader');
+            let timeoutId = null;
+
+            input.addEventListener('input', (e) => {
+                const val = e.target.value.trim();
+                
+                if (timeoutId) clearTimeout(timeoutId);
+
+                if (val.length < 2) {
+                    resultsDiv.classList.add('hidden');
+                    return;
+                }
+
+                timeoutId = setTimeout(() => {
+                    performSearch(val);
+                }, 600);
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.relative')) {
+                    resultsDiv.classList.add('hidden');
+                }
+            });
+        }
+
+        function transliterate(text) {
+            return text.toLowerCase().split('').map(char => 
+                TRANSLITERATION[char] || char
+            ).join('');
+        }
+
+        function isRussian(text) {
+            return /[а-яё]/i.test(text);
+        }
+
+        async function performSearch(query) {
+            const resultsDiv = document.getElementById('searchResults');
+            const loader = document.getElementById('searchLoader');
+            
+            loader.classList.remove('hidden');
+            resultsDiv.innerHTML = '';
+            resultsDiv.classList.remove('hidden');
+
+            try {
+                let allResults = [];
+                const seenIds = new Set();
+
+                const searchTerms = [query];
+                const lowerQuery = query.toLowerCase();
+
+                for (const [ru, en] of Object.entries(SHOW_TRANSLATIONS)) {
+                    if (lowerQuery.includes(ru)) {
+                        searchTerms.push(en);
+                        break;
+                    }
+                }
+
+                if (isRussian(query)) {
+                    searchTerms.push(transliterate(query));
+                }
+
+                for (const term of searchTerms) {
+                    try {
+                        const tvmazeResults = await searchTVMaze(term);
+                        tvmazeResults.forEach(show => {
+                            if (!seenIds.has(show.id)) {
+                                seenIds.add(show.id);
+                                allResults.push({ ...show, source: 'TVMaze' });
+                            }
+                        });
+                    } catch (e) {
+                        console.warn('TVMaze failed:', e);
+                    }
+
+                    if (allResults.length >= 15) break;
+                }
+
+                if (allResults.length < 5) {
+                    try {
+                        const omdbResults = await searchOMDb(query);
+                        omdbResults.forEach(show => {
+                            if (!seenIds.has(show.id)) {
+                                seenIds.add(show.id);
+                                allResults.push({ ...show, source: 'OMDb' });
+                            }
+                        });
+                    } catch (e) {
+                        console.warn('OMDb failed:', e);
+                    }
+                }
+
+                loader.classList.add('hidden');
+                resultsDiv.innerHTML = '';
+
+                if (allResults.length === 0) {
+                    resultsDiv.innerHTML = `
+                        <div class="p-4 text-center text-sm text-gray-400">
+                            Ничего не найдено 😔<br>
+                            <span class="text-xs opacity-60">Попробуйте английское название</span>
+                        </div>`;
+                    return;
+                }
+
+                allResults.slice(0, 20).forEach(show => {
+                    const exists = state.shows.find(s => s.id === show.id);
+                    
+                    const posterUrl = optimizeImageUrl(show.posterUrl);
+                    const year = show.year ? `(${show.year})` : '';
+
+                    const btnText = exists ? 'В списке' : 'Добавить';
+                    const btnClass = exists ? 'background:#374151;color:#9ca3af;cursor:not-allowed;' : 'background:#2563eb;color:white;';
+
+                    const item = document.createElement('div');
+                    item.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid rgba(255,255,255,0.05);';
+                    item.innerHTML = `
+                        <div class="poster-container" style="width:48px;height:64px;flex-shrink:0;">
+                            <img src="${posterUrl}" class="w-full h-full object-cover poster-img" loading="lazy" onload="this.classList.add('loaded'); this.classList.remove('loading');" onerror="this.src='https://via.placeholder.com/150x220?text=Error'; this.classList.add('loaded');">
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-weight:600;font-size:14px;color:#fff;margin-bottom:4px;">${show.title}</div>
+                            <div style="font-size:11px;color:#9ca3af;">${year}</div>
+                        </div>
+                        <button ${exists ? 'disabled' : ''} onclick="addShowFromApi('${show.id}', '${show.title.replace(/'/g, "\\'")}', '${show.originalTitle ? show.originalTitle.replace(/'/g, "\\'") : ''}', '${posterUrl}', '${show.year}', '${show.endYear}', '${show.episodes}')" style="padding:6px 12px;border-radius:6px;font-size:11px;font-weight:700;text-transform:uppercase;${btnClass}">
+                            ${btnText}
+                        </button>
+                    `;
+                    resultsDiv.appendChild(item);
+                });
+
+            } catch (error) {
+                console.error('Search error:', error);
+                loader.classList.add('hidden');
+                resultsDiv.innerHTML = `
+                    <div class="p-4 text-center text-sm">
+                        <span class="text-red-400">Ошибка поиска</span><br>
+                        <span class="text-xs text-gray-500">${error.message}</span>
+                    </div>`;
+            }
+        }
+
+        async function searchTVMaze(query) {
+            const response = await fetch(`${TVMAZE_BASE_URL}/search/shows?q=${encodeURIComponent(query)}`);
+            
+            if (!response.ok) throw new Error(`TVMaze: ${response.status}`);
+            
+            const data = await response.json();
+            
+            if (!data || data.length === 0) return [];
+
+            return data
+                .filter(item => item.show && item.show.name)
+                .map(item => {
+                    let posterUrl = 'https://via.placeholder.com/300x450?text=No+Image';
+                    if (item.show.image && item.show.image.medium) {
+                        posterUrl = item.show.image.medium;
+                    } else if (item.show.image && item.show.image.original) {
+                        posterUrl = item.show.image.original;
+                    }
+
+                    const isRu = isRussian(item.show.name);
+                    const title = item.show.name;
+                    const originalTitle = item.show.language === 'en' && !isRu ? item.show.name : '';
+
+                    return {
+                        id: `tvmaze_${item.show.id}`,
+                        title: title,
+                        originalTitle: originalTitle,
+                        year: item.show.premiered ? item.show.premiered.substring(0, 4) : '',
+                        endYear: item.show.ended ? item.show.ended.substring(0, 4) : '',
+                        episodes: item.show.episodes || 0,
+                        posterUrl: posterUrl,
+                        network: item.show.network ? item.show.network.name : '',
+                        rating: item.show.rating ? item.show.rating.average : null
+                    };
+                });
+        }
+
+        async function searchOMDb(query) {
+            const response = await fetch(`${OMDB_BASE_URL}?s=${encodeURIComponent(query)}&type=series`);
+            
+            if (!response.ok) throw new Error(`OMDb: ${response.status}`);
+            
+            const data = await response.json();
+            
+            if (!data.Search) return [];
+
+            return data.Search
+                .filter(show => show.Title)
+                .map((show, index) => ({
+                    id: `omdb_${show.imdbID || index}_${Date.now()}`,
+                    title: show.Title,
+                    originalTitle: show.Title,
+                    year: show.Year,
+                    endYear: '',
+                    episodes: 0,
+                    posterUrl: show.Poster && show.Poster !== 'N/A' ? show.Poster : 'https://via.placeholder.com/300x450?text=No+Image'
+                }));
+        }
+
+        // 🔥 ИСПРАВЛЕНО: Теперь передаём year, endYear, episodes
+        function addShowFromApi(id, title, originalTitle, posterUrl, year, endYear, episodes) {
+            if (!state.shows.find(s => s.id === id)) {
+                state.shows.push({
+                    id: id,
+                    title: title,
+                    originalTitle: originalTitle || '',
+                    posterUrl: optimizeImageUrl(posterUrl),
+                    rating: null,
+                    impressions: '',
+                    year: year || '',
+                    endYear: endYear || '',
+                    episodes: episodes ? parseInt(episodes) : 0
+                });
+                saveUserData();
+                document.getElementById('searchInput').value = '';
+                document.getElementById('searchResults').classList.add('hidden');
+                
+                if(window.Telegram && window.Telegram.WebApp.HapticFeedback) {
+                    window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+                }
+            }
+        }
+
+        function removeShow(event, id) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            if(confirm('Удалить этот сериал из списка?')) {
+                const item = document.querySelector(`[data-show-id="${id}"]`);
+                if (item) {
+                    item.classList.add('removing');
+                    setTimeout(() => {
+                        state.shows = state.shows.filter(s => s.id !== id);
+                        saveUserData();
+                    }, 300);
+                } else {
+                    state.shows = state.shows.filter(s => s.id !== id);
+                    saveUserData();
+                }
+                
+                if(window.Telegram && window.Telegram.WebApp.HapticFeedback) {
+                    window.Telegram.WebApp.HapticFeedback.notificationOccurred('warning');
+                }
+            }
+        }
+
+        function getRatingClass(rating) {
+            if (rating === null || rating === undefined) return 'rating-none';
+            if (rating >= 7.5) return 'rating-high';
+            if (rating >= 5) return 'rating-med';
+            return 'rating-low';
+        }
+
+        function renderShowList() {
+            const container = document.getElementById('showList');
+            const emptyState = document.getElementById('emptyState');
+            const showCount = document.getElementById('showCount');
+            
+            container.innerHTML = '';
+
+            if (state.shows.length === 0) {
+                emptyState.classList.remove('hidden');
+                showCount.innerText = '0 сериалов';
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            const sortedShows = [...state.shows].sort((a, b) => {
+                const ratingA = a.rating !== null && a.rating !== undefined ? a.rating : -1;
+                const ratingB = b.rating !== null && b.rating !== undefined ? b.rating : -1;
+                return ratingB - ratingA;
+            });
+
+            showCount.innerText = `${sortedShows.length} сериал${sortedShows.length === 1 ? '' : 'ов'}`;
+
+            sortedShows.forEach(show => {
+                const item = document.createElement('div');
+                item.className = 'list-item adding';
+                item.setAttribute('data-show-id', show.id);
+                
+                const ratingClass = getRatingClass(show.rating);
+                const ratingDisplay = show.rating !== null && show.rating !== undefined
+                    ? show.rating.toFixed(1)
+                    : '--';
+
+                const safePosterUrl = optimizeImageUrl(show.posterUrl);
+
+                const yearRange = show.year && show.endYear && show.endYear !== show.year 
+                    ? `${show.year} – ${show.endYear}` 
+                    : (show.year || '—');
+                const episodesText = show.episodes && show.episodes > 0 
+                    ? `${show.episodes} серий` 
+                    : '';
+
+                const originalTitleHtml = show.originalTitle && show.originalTitle !== show.title && !isRussian(show.title)
+                    ? `<p class="original-title">${show.originalTitle}</p>`
+                    : '';
+
+                // 🔥 TABLE LAYOUT - работает везде
+                item.innerHTML = `
+                    <div class="show-table" onclick="if(!event.target.closest('.delete-btn')) openModal('${show.id}')">
+                        <div class="show-row">
+                            <td class="cell-poster">
+                                <div class="poster-container">
+                                    <img src="${safePosterUrl}" class="w-full h-full object-cover poster-img" loading="lazy" onload="this.classList.add('loaded'); this.classList.remove('loading');" onerror="this.src='https://via.placeholder.com/200x280?text=No+Image'; this.classList.add('loaded');">
+                                </div>
+                            </td>
+                            <td class="cell-info">
+                                <h3 class="show-title">${show.title}</h3>
+                                ${originalTitleHtml}
+                                <div class="meta-info">
+                                    ${yearRange ? `<span class="meta-tag">
+                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                        ${yearRange}
+                                    </span>` : ''}
+                                    ${episodesText ? `<span class="meta-tag">
+                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path></svg>
+                                        ${episodesText}
+                                    </span>` : ''}
+                                </div>
+                            </td>
+                            <td class="cell-actions">
+                                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+                                    <div class="rating-badge ${ratingClass}">
+                                        ${ratingDisplay}
+                                    </div>
+                                    <button onclick="removeShow(event, '${show.id}')" class="delete-btn bg-black/60 hover:bg-red-600 text-white rounded-full p-2 backdrop-blur-sm transition-colors border border-white/10">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function openModal(id) {
+            const show = state.shows.find(s => s.id === id);
+            if (!show) {
+                console.error('Show not found:', id);
+                return;
+            }
+
+            state.currentModalShowId = id;
+
+            const posterImg = document.getElementById('modalPoster');
+            posterImg.classList.remove('loaded');
+            posterImg.classList.add('loading');
+            posterImg.src = optimizeImageUrl(show.posterUrl);
+            
+            document.getElementById('modalTitle').innerText = show.title;
+            document.getElementById('modalOriginalTitle').innerText = show.originalTitle && show.originalTitle !== show.title ? show.originalTitle : '';
+            document.getElementById('modalStudio').innerText = 'Сериал';
+            document.getElementById('modalRatingDisplay').innerText = (show.rating !== null && show.rating !== undefined) ? show.rating.toFixed(1) : '--';
+            document.getElementById('impressionsInput').value = show.impressions || '';
+            
+            document.getElementById('ratingInputContainer').classList.add('hidden');
+            document.getElementById('detailModal').classList.remove('hidden');
+            
+            if(window.Telegram && window.Telegram.WebApp.HapticFeedback) {
+                window.Telegram.WebApp.HapticFeedback.selectionChanged();
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('detailModal').classList.add('hidden');
+            state.currentModalShowId = null;
+        }
+
+        function enableEditRating() {
+            const container = document.getElementById('ratingInputContainer');
+            const input = document.getElementById('ratingInput');
+            const show = state.shows.find(s => s.id === state.currentModalShowId);
+            
+            input.value = show.rating !== null && show.rating !== undefined ? show.rating : '';
+            container.classList.remove('hidden');
+            input.focus();
+        }
+
+        function saveRating() {
+            const input = document.getElementById('ratingInput');
+            let val = parseFloat(input.value);
+            
+            if (isNaN(val)) val = 0;
+            if (val < 0) val = 0;
+            if (val > 10) val = 10;
+
+            val = Math.round(val * 10) / 10;
+
+            const showIndex = state.shows.findIndex(s => s.id === state.currentModalShowId);
+            if (showIndex !== -1) {
+                state.shows[showIndex].rating = val;
+                saveUserData();
+                document.getElementById('modalRatingDisplay').innerText = val.toFixed(1);
+                document.getElementById('ratingInputContainer').classList.add('hidden');
+                
+                if(window.Telegram && window.Telegram.WebApp.HapticFeedback) {
+                    window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                }
+            }
+        }
+
+        function saveImpressions() {
+            const text = document.getElementById('impressionsInput').value;
+            const showIndex = state.shows.findIndex(s => s.id === state.currentModalShowId);
+            
+            if (showIndex !== -1) {
+                state.shows[showIndex].impressions = text;
+                saveUserData();
+                
+                if(window.Telegram && window.Telegram.WebApp.HapticFeedback) {
+                    window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                }
+            }
+        }
+
+        function shareProfile() {
+            const link = `https://t.me/your_bot_name?startapp=${state.userId}`;
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(link).then(() => {
+                    if(window.Telegram && window.Telegram.WebApp) {
+                        window.Telegram.WebApp.showAlert('Ссылка скопирована!');
+                    } else {
+                        alert('Ссылка скопирована!');
+                    }
+                });
+            } else {
+                window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=Зацени мой список сериалов!`, '_blank');
+            }
+        }
+    </script>
 </body>
 </html>
