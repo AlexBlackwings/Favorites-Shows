@@ -2,39 +2,161 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Series List</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Series Tracker</title>
+    <script src="https://telegram.org"></script>
+    <style>
+        :root {
+            --tg-theme-bg: #fff;
+            --tg-theme-text: #000;
+            --accent: #3390ec;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--tg-theme-secondary-bg-color, #f4f4f5);
+            color: var(--tg-theme-text-color, #000);
+            margin: 0; padding: 0;
+        }
+        .header {
+            position: sticky; top: 0; z-index: 10;
+            background: var(--tg-theme-bg-color, #fff);
+            padding: 10px; border-bottom: 1px solid #ddd;
+        }
+        input {
+            width: 100%; box-sizing: border-box; padding: 12px;
+            border-radius: 10px; border: 1px solid #ccc;
+            background: var(--tg-theme-secondary-bg-color);
+            color: var(--tg-theme-text-color);
+        }
+        #results {
+            background: var(--tg-theme-bg-color);
+            position: absolute; width: calc(100% - 20px); max-height: 200px;
+            overflow-y: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-radius: 0 0 10px 10px;
+        }
+        .search-item { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; }
+        
+        .list-container { padding: 10px; }
+        .series-card {
+            display: flex; align-items: center;
+            background: var(--tg-theme-bg-color, #fff);
+            border-radius: 12px; margin-bottom: 10px;
+            padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .series-card img { width: 60px; height: 90px; border-radius: 8px; object-fit: cover; }
+        .series-info { flex-grow: 1; margin-left: 15px; }
+        .series-title { font-weight: bold; font-size: 16px; margin-bottom: 4px; }
+        .series-sub { font-size: 12px; color: #888; }
+        .rating-badge {
+            background: var(--accent); color: white;
+            padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 14px;
+        }
+
+        /* Modal Area */
+        #modal {
+            display: none; position: fixed; top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.5); z-index: 100;
+        }
+        .modal-content {
+            background: var(--tg-theme-bg-color); margin: 20% auto;
+            width: 80%; padding: 20px; border-radius: 15px;
+        }
+        textarea { width: 100%; height: 80px; margin: 10px 0; border-radius: 8px; border: 1px solid #ccc; }
+        .btn-save { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 8px; width: 100%; }
+    </style>
 </head>
 <body>
-    <div id="app">
-        <!-- Поиск -->
-        <header>
-            <input type="text" id="searchInput" placeholder="Поиск сериалов...">
-            <div id="results" class="search-results"></div>
-        </header>
 
-        <!-- Основной список -->
-        <main id="seriesList">
-            <!-- Сюда будут добавляться карточки -->
-        </main>
+<div class="header">
+    <input type="text" id="searchInput" placeholder="Введите название сериала...">
+    <div id="results"></div>
+</div>
+
+<div class="list-container" id="seriesList">
+    <!-- Сюда добавляются сериалы -->
+</div>
+
+<div id="modal">
+    <div class="modal-content">
+        <h3 id="mTitle">Название</h3>
+        <label>Ваша оценка (0.00 - 10.00):</label>
+        <input type="number" id="mRate" step="0.01" min="0" max="10">
+        <textarea id="mReview" placeholder="Ваши впечатления..."></textarea>
+        <button class="btn-save" onclick="saveData()">Сохранить</button>
+        <button class="btn-save" style="background:#888; margin-top:5px" onclick="closeModal()">Закрыть</button>
     </div>
+</div>
 
-    <!-- Модальное окно (страница сериала) -->
-    <div id="modal" class="modal hidden">
-        <div class="modal-content">
-            <button onclick="closeModal()">✕</button>
-            <h2 id="modalTitle"></h2>
-            <div class="rating-input">
-                <label>Оценка (0-10):</label>
-                <input type="number" id="userRating" step="0.01" min="0" max="10">
+<script>
+    const tg = window.Telegram.WebApp;
+    const API_KEY = 'ВАШ_API_KEY_ИЗ_TMDB'; // <--- ПОСТАВЬТЕ СВОЙ КЛЮЧ
+    let mySeries = JSON.parse(localStorage.getItem('my_series') || '[]');
+    let currentId = null;
+
+    tg.ready();
+    tg.expand();
+    renderList();
+
+    // Поиск
+    document.getElementById('searchInput').addEventListener('input', async (e) => {
+        const q = e.target.value;
+        if (q.length < 3) { document.getElementById('results').innerHTML = ''; return; }
+        
+        const res = await fetch(`https://api.themoviedb.org{API_KEY}&query=${encodeURIComponent(q)}&language=ru-RU`);
+        const data = await res.json();
+        
+        document.getElementById('results').innerHTML = data.results.slice(0, 5).map(s => `
+            <div class="search-item" onclick="addItem('${s.id}', '${s.name.replace(/'/g, "")}', '${s.original_name.replace(/'/g, "")}', '${s.poster_path}')">
+                ${s.name} / ${s.original_name}
             </div>
-            <textarea id="userNotes" placeholder="Ваши впечатления..."></textarea>
-            <button onclick="saveDetails()">Сохранить</button>
-        </div>
-    </div>
+        `).join('');
+    });
 
-    <script src="app.js"></script>
+    function addItem(id, name, original, poster) {
+        if (!mySeries.find(x => x.id == id)) {
+            mySeries.push({ id, name, original, poster, rating: "0.00", review: "" });
+            save();
+        }
+        document.getElementById('results').innerHTML = '';
+        document.getElementById('searchInput').value = '';
+    }
+
+    function renderList() {
+        const container = document.getElementById('seriesList');
+        container.innerHTML = mySeries.map(s => `
+            <div class="series-card" onclick="openModal('${s.id}')">
+                <img src="https://image.tmdb.org{s.poster}" alt="">
+                <div class="series-info">
+                    <div class="series-title">${s.name}</div>
+                    <div class="series-sub">${s.original}</div>
+                </div>
+                <div class="rating-badge">${s.rating}</div>
+            </div>
+        `).join('');
+    }
+
+    function openModal(id) {
+        const item = mySeries.find(x => x.id == id);
+        currentId = id;
+        document.getElementById('mTitle').innerText = item.name;
+        document.getElementById('mRate').value = item.rating;
+        document.getElementById('mReview').value = item.review;
+        document.getElementById('modal').style.display = 'block';
+    }
+
+    function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+    function saveData() {
+        const item = mySeries.find(x => x.id == currentId);
+        item.rating = parseFloat(document.getElementById('mRate').value || 0).toFixed(2);
+        item.review = document.getElementById('mReview').value;
+        save();
+        closeModal();
+    }
+
+    function save() {
+        localStorage.setItem('my_series', JSON.stringify(mySeries));
+        renderList();
+    }
+</script>
 </body>
 </html>
