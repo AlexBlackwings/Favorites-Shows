@@ -3,78 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Series List</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <title>Series Tracker</title>
+    <script src="https://telegram.org"></script>
     <style>
-        :root { --bg: var(--tg-theme-bg-color, #fff); --text: var(--tg-theme-text-color, #000); --accent: #3390ec; }
-        body { font-family: -apple-system, sans-serif; background: var(--tg-theme-secondary-bg-color, #f4f4f5); color: var(--text); margin: 0; padding-bottom: 20px; }
-        .search-bar { position: sticky; top: 0; background: var(--bg); padding: 12px; z-index: 10; border-bottom: 1px solid #ddd; }
-        input { width: 100%; box-sizing: border-box; padding: 12px; border-radius: 10px; border: 1px solid #ccc; background: var(--tg-theme-secondary-bg-color); color: var(--text); font-size: 16px; }
-        #results { position: absolute; width: calc(100% - 24px); background: var(--bg); box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 0 0 10px 10px; max-height: 300px; overflow-y: auto; display: none; }
+        :root { --tg-bg: var(--tg-theme-bg-color, #ffffff); --tg-text: var(--tg-theme-text-color, #000000); --accent: #3390ec; }
+        body { font-family: -apple-system, sans-serif; background: var(--tg-theme-secondary-bg-color, #f4f4f5); color: var(--tg-text); margin: 0; padding: 0; }
+        
+        .search-area { position: sticky; top: 0; background: var(--tg-bg); padding: 12px; z-index: 100; border-bottom: 1px solid #ddd; }
+        input { width: 100%; box-sizing: border-box; padding: 12px; border-radius: 10px; border: 1px solid #ccc; background: var(--tg-theme-secondary-bg-color); color: var(--tg-text); font-size: 16px; }
+        
+        #results { position: absolute; width: calc(100% - 24px); background: var(--tg-bg); box-shadow: 0 8px 24px rgba(0,0,0,0.15); border-radius: 0 0 12px 12px; max-height: 300px; overflow-y: auto; display: none; }
         .res-item { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; }
-        .res-item img { width: 40px; height: 55px; border-radius: 4px; object-fit: cover; margin-right: 12px; }
+        .res-item img { width: 45px; height: 65px; border-radius: 6px; object-fit: cover; margin-right: 12px; background: #eee; }
+        
         .my-list { padding: 12px; }
-        .card { display: flex; background: var(--bg); border-radius: 14px; margin-bottom: 12px; padding: 12px; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
-        .card img { width: 65px; height: 95px; border-radius: 8px; object-fit: cover; }
+        .card { display: flex; background: var(--tg-bg); border-radius: 16px; margin-bottom: 12px; padding: 12px; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: 0.2s; }
+        .card img { width: 70px; height: 100px; border-radius: 10px; object-fit: cover; background: #eee; }
         .card-info { flex-grow: 1; margin: 0 15px; }
-        .card-title { font-weight: bold; font-size: 17px; margin-bottom: 4px; }
-        .card-rating { font-weight: 800; color: var(--accent); font-size: 15px; }
-        #modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index: 100; }
-        .modal-win { background: var(--bg); margin: 15% auto; width: 85%; padding: 20px; border-radius: 20px; box-sizing: border-box; }
-        textarea { width: 100%; height: 120px; margin: 15px 0; border-radius: 10px; border: 1px solid #ccc; padding: 10px; box-sizing: border-box; font-size: 14px; }
-        .btn { background: var(--accent); color: #fff; border: none; padding: 14px; width: 100%; border-radius: 12px; font-weight: bold; font-size: 16px; margin-top: 8px; }
+        .card-title { font-weight: bold; font-size: 18px; margin-bottom: 4px; }
+        .card-rating { font-weight: 900; color: var(--accent); font-size: 16px; }
+
+        #modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index: 1000; backdrop-filter: blur(4px); }
+        .modal-content { background: var(--tg-bg); margin: 20% auto; width: 85%; padding: 24px; border-radius: 24px; box-sizing: border-box; }
+        textarea { width: 100%; height: 120px; margin: 15px 0; border-radius: 12px; border: 1px solid #ccc; padding: 12px; box-sizing: border-box; font-size: 15px; font-family: inherit; }
+        .btn { background: var(--accent); color: #fff; border: none; padding: 14px; width: 100%; border-radius: 14px; font-weight: bold; font-size: 16px; margin-top: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<div class="search-bar">
-    <input type="text" id="q" placeholder="Поиск сериала (на английском)..." autocomplete="off">
+<div class="search-area">
+    <input type="text" id="q" placeholder="Поиск (на английском)..." autocomplete="off">
     <div id="results"></div>
 </div>
 
 <div class="my-list" id="list"></div>
 
 <div id="modal">
-    <div class="modal-win">
-        <h2 id="mT" style="margin-top:0"></h2>
+    <div class="modal-content">
+        <h2 id="mT" style="margin:0 0 10px 0"></h2>
         <label>Ваша оценка (0-10):</label>
-        <input type="number" id="mR" step="0.01" min="0" max="10">
-        <textarea id="mE" placeholder="Ваши впечатления..."></textarea>
+        <input type="number" id="mR" step="0.01" min="0" max="10" placeholder="8.50">
+        <textarea id="mE" placeholder="Ваш отзыв..."></textarea>
         <button class="btn" onclick="save()">Сохранить</button>
-        <button class="btn" style="background:#888" onclick="closeM()">Закрыть</button>
-        <button class="btn" style="background:transparent; color:red; font-size:14px" onclick="del()">Удалить из списка</button>
+        <button class="btn" style="background:#efeff4; color:#000" onclick="closeM()">Отмена</button>
+        <button class="btn" style="background:transparent; color:#ff3b30; font-size:14px; margin-top:15px" onclick="del()">Удалить сериал</button>
     </div>
 </div>
 
 <script>
     const tg = window.Telegram.WebApp;
-    let myS = JSON.parse(localStorage.getItem('my_shows') || '[]');
+    let myS = JSON.parse(localStorage.getItem('user_shows') || '[]');
     let cur = null;
 
-    tg.ready(); tg.expand();
+    tg.ready();
+    tg.expand();
     render();
 
+    // Исправленная логика поиска
     document.getElementById('q').addEventListener('input', async (e) => {
         const val = e.target.value;
-        const res = document.getElementById('results');
-        if (val.length < 3) { res.style.display = 'none'; return; }
-
-        const response = await fetch(`https://api.tvmaze.com{encodeURIComponent(val)}`);
-        const data = await response.json();
+        const resDiv = document.getElementById('results');
         
-        res.innerHTML = data.slice(0, 6).map(i => `
-            <div class="res-item" onclick="add('${i.show.id}', '${i.show.name.replace(/'/g,"")}', '${i.show.image?.medium || ''}')">
-                <img src="${i.show.image?.medium || 'https://via.placeholder.com'}">
-                <div><strong>${i.show.name}</strong><br><small>${i.show.premiered?.split('-')[0] || ''}</small></div>
-            </div>
-        `).join('');
-        res.style.display = 'block';
+        if (val.length < 2) { resDiv.style.display = 'none'; return; }
+
+        try {
+            // Используем HTTPS и правильный эндпоинт TVMaze
+            const response = await fetch(`https://api.tvmaze.com{encodeURIComponent(val)}`);
+            const data = await response.json();
+            
+            if (data.length > 0) {
+                resDiv.innerHTML = data.slice(0, 5).map(item => {
+                    const s = item.show;
+                    const img = s.image ? s.image.medium : 'https://via.placeholder.com';
+                    return `
+                        <div class="res-item" onclick="add('${s.id}', '${s.name.replace(/'/g, "")}', '${img}')">
+                            <img src="${img}">
+                            <div><strong>${s.name}</strong><br><small>${s.premiered ? s.premiered.split('-')[0] : 'N/A'}</small></div>
+                        </div>
+                    `;
+                }).join('');
+                resDiv.style.display = 'block';
+            } else {
+                resDiv.style.display = 'none';
+            }
+        } catch (err) {
+            console.error("Search error:", err);
+        }
     });
 
     function add(id, name, img) {
-        if (!myS.find(x => x.id === id)) {
+        if (!myS.find(x => x.id == id)) {
             myS.push({ id, name, img, rating: "0.00", review: "" });
-            localStorage.setItem('my_shows', JSON.stringify(myS));
+            localStorage.setItem('user_shows', JSON.stringify(myS));
             render();
         }
         document.getElementById('results').style.display = 'none';
@@ -82,9 +102,14 @@
     }
 
     function render() {
-        document.getElementById('list').innerHTML = myS.map((s, i) => `
+        const container = document.getElementById('list');
+        if (myS.length === 0) {
+            container.innerHTML = '<p style="text-align:center; color:#888; margin-top:50px">Ваш список пуст.<br>Воспользуйтесь поиском выше.</p>';
+            return;
+        }
+        container.innerHTML = myS.map((s, i) => `
             <div class="card" onclick="openM(${i})">
-                <img src="${s.img || 'https://via.placeholder.com'}">
+                <img src="${s.img}">
                 <div class="card-info">
                     <div class="card-title">${s.name}</div>
                     <div class="card-rating">★ ${s.rating}</div>
@@ -105,13 +130,22 @@
     function closeM() { document.getElementById('modal').style.display = 'none'; }
 
     function save() {
-        myS[cur].rating = parseFloat(document.getElementById('mR').value || 0).toFixed(2);
+        const rate = parseFloat(document.getElementById('mR').value || 0).toFixed(2);
+        myS[cur].rating = rate;
         myS[cur].review = document.getElementById('mE').value;
-        localStorage.setItem('my_shows', JSON.stringify(myS));
-        render(); closeM();
+        localStorage.setItem('user_shows', JSON.stringify(myS));
+        render();
+        closeM();
     }
 
-    function del() { if(confirm('Удалить?')) { myS.splice(cur, 1); localStorage.setItem('my_shows', JSON.stringify(myS)); render(); closeM(); } }
+    function del() {
+        if(confirm('Удалить этот сериал?')) {
+            myS.splice(cur, 1);
+            localStorage.setItem('user_shows', JSON.stringify(myS));
+            render();
+            closeM();
+        }
+    }
 </script>
 </body>
 </html>
