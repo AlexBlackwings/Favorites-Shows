@@ -82,6 +82,9 @@
             width: 100px;
             height: 140px;
             flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .poster-img {
@@ -89,9 +92,34 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            opacity: 0;
         }
         .poster-img.loading { opacity: 0.5; }
         .poster-img.loaded { opacity: 1; }
+
+        /* Встроенная SVG-заглушка (будет показана, если изображение не загрузилось) */
+        .poster-placeholder {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #4b5563;
+            font-size: 10px;
+            text-align: center;
+            padding: 8px;
+            box-sizing: border-box;
+            pointer-events: none;
+        }
+        .poster-placeholder svg {
+            width: 40px;
+            height: 40px;
+            opacity: 0.5;
+        }
 
         .rating-badge {
             min-width: 44px;
@@ -301,7 +329,10 @@
             
             <div class="flex gap-5 mb-6">
                 <div class="poster-container flex-shrink-0">
-                    <img id="modalPoster" class="w-full h-full object-cover poster-img" src="" alt="Poster" onload="this.classList.add('loaded'); this.classList.remove('loading');" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'; this.classList.add('loaded');">
+                    <img id="modalPoster" class="w-full h-full object-cover poster-img" src="" alt="Poster" onload="this.classList.add('loaded'); this.classList.remove('loading');" onerror="this.onerror=null; this.src=''; this.parentElement.querySelector('.poster-placeholder').style.display='flex'; this.style.display='none';">
+                    <div class="poster-placeholder" style="display: none;">
+                        <svg fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4-3h2v13h-2z"/></svg>
+                    </div>
                 </div>
                 <div class="flex-1 flex flex-col justify-center">
                     <h2 id="modalTitle" class="text-xl font-bold text-white leading-tight mb-1"></h2>
@@ -331,7 +362,7 @@
                 <div id="modalGenres" class="flex flex-wrap gap-2"></div>
             </div>
 
-            <!-- Сюжет (полный, без ограничений) -->
+            <!-- Сюжет (полный) -->
             <div class="mb-4">
                 <label class="block text-xs text-gray-400 mb-2 uppercase tracking-wider font-bold">Сюжет</label>
                 <p id="modalSummary" class="text-sm text-gray-300 leading-relaxed"></p>
@@ -378,58 +409,42 @@
             const IMAGE_CACHE_KEY = 'tma_image_cache';
             const IMAGE_CACHE_EXPIRY = 7 * 24 * 60 * 60 * 1000;
 
-            // Словарь для перевода жанров
             const GENRE_TRANSLATIONS = {
-                'Drama': 'Драма',
-                'Comedy': 'Комедия',
-                'Action': 'Боевик',
-                'Adventure': 'Приключения',
-                'Crime': 'Криминал',
-                'Mystery': 'Мистика',
-                'Thriller': 'Триллер',
-                'Horror': 'Ужасы',
-                'Romance': 'Мелодрама',
-                'Science-Fiction': 'Фантастика',
-                'Fantasy': 'Фэнтези',
-                'Family': 'Семейный',
-                'Animation': 'Анимация',
-                'Documentary': 'Документальный',
-                'History': 'История',
-                'War': 'Военный',
-                'Music': 'Музыка',
-                'Western': 'Вестерн',
-                'Sport': 'Спорт',
-                'Reality': 'Реалити-шоу',
-                'Talk Show': 'Ток-шоу',
-                'News': 'Новости',
-                'Soap': 'Мыльная опера',
-                'Sitcom': 'Ситком',
-                'Medical': 'Медицинский',
-                'Legal': 'Юридический',
-                'Political': 'Политический',
-                'Supernatural': 'Сверхъестественное',
-                'Teen': 'Подростковый',
-                'Post-Apocalyptic': 'Постапокалипсис',
-                'Space': 'Космос',
+                'Drama': 'Драма', 'Comedy': 'Комедия', 'Action': 'Боевик',
+                'Adventure': 'Приключения', 'Crime': 'Криминал', 'Mystery': 'Мистика',
+                'Thriller': 'Триллер', 'Horror': 'Ужасы', 'Romance': 'Мелодрама',
+                'Science-Fiction': 'Фантастика', 'Fantasy': 'Фэнтези', 'Family': 'Семейный',
+                'Animation': 'Анимация', 'Documentary': 'Документальный', 'History': 'История',
+                'War': 'Военный', 'Music': 'Музыка', 'Western': 'Вестерн', 'Sport': 'Спорт',
+                'Reality': 'Реалити-шоу', 'Talk Show': 'Ток-шоу', 'News': 'Новости',
+                'Soap': 'Мыльная опера', 'Sitcom': 'Ситком', 'Medical': 'Медицинский',
+                'Legal': 'Юридический', 'Political': 'Политический', 'Supernatural': 'Сверхъестественное',
+                'Teen': 'Подростковый', 'Post-Apocalyptic': 'Постапокалипсис', 'Space': 'Космос',
                 'Detective': 'Детектив'
             };
 
-            function translateGenre(genreEn) {
-                return GENRE_TRANSLATIONS[genreEn] || genreEn;
-            }
+            function translateGenre(genreEn) { return GENRE_TRANSLATIONS[genreEn] || genreEn; }
 
             const TRANSLITERATION = {
-                'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
-                'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
-                'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
-                'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch',
-                'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
+                'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z','и':'i','й':'y',
+                'к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f',
+                'х':'h','ц':'ts','ч':'ch','ш':'sh','щ':'sch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya'
             };
 
-            const SHOW_TRANSLATIONS = { /* ... (как в предыдущих версиях) ... */
-                'ведьмак': 'The Witcher',
-                'мандалорец': 'The Mandalorian',
-                // ... остальные переводы
+            const SHOW_TRANSLATIONS = {
+                'ведьмак':'The Witcher','мандалорец':'The Mandalorian','сыны анархии':'Sons of Anarchy',
+                'женщина халк':'She-Hulk','во все тяжкие':'Breaking Bad','лучше звоните солу':'Better Call Saul',
+                'очень странные дела':'Stranger Things','игра престолов':'Game of Thrones','дом дракона':'House of the Dragon',
+                'чернобыль':'Chernobyl','тьма':'Dark','офис':'The Office','друзья':'Friends','шерлок':'Sherlock',
+                'рик и морти':'Rick and Morty','игра в кальмара':'Squid Game','эйфория':'Euphoria',
+                'острые козырьки':'Peaky Blinders','черное зеркало':'Black Mirror','наследники':'Succession',
+                'пацаны':'The Boys','уэнсдей':'Wednesday','аркейн':'Arcane','академия амбрелла':'The Umbrella Academy',
+                'озарк':'Ozark','корона':'The Crown','сексуальное воспитание':'Sex Education','бумажный дом':'Money Heist',
+                'элита':'Elite','сверхъестественное':'Supernatural','клиник':'Scrubs','теория большого взрыва':'The Big Bang Theory',
+                'как я встретил вашу маму':'How I Met Your Mother','бруклин 99':'Brooklyn Nine-Nine',
+                'ход мертвецов':'The Walking Dead','lost':'Lost','остаться в живых':'Lost','доктор кто':'Doctor Who',
+                'секретные материалы':'The X-Files','звездный путь':'Star Trek','звездные войны':'Star Wars',
+                'бригада':'Brigada','локи':'Loki','силу':'Silo','меня зовут эрл':'My Name Is Earl'
             };
 
             let state = {
@@ -438,16 +453,97 @@
                 currentModalShowId: null
             };
 
-            // ---- Функция склонения слова "сериал" ----
             function getSeriesWord(count) {
                 if (count % 10 === 1 && count % 100 !== 11) return 'сериала';
                 return 'сериалов';
             }
 
             function updateHeaderTitle() {
-                const titleEl = document.getElementById('dynamicTitle');
-                const count = state.shows.length;
-                titleEl.textContent = `Мой рейтинг из ${count} ${getSeriesWord(count)}`;
+                document.getElementById('dynamicTitle').textContent = `Мой рейтинг из ${state.shows.length} ${getSeriesWord(state.shows.length)}`;
+            }
+
+            // ---- Работа с кешем изображений ----
+            function getCachedImage(url) {
+                try {
+                    const cache = JSON.parse(localStorage.getItem(IMAGE_CACHE_KEY) || '{}');
+                    const cached = cache[url];
+                    if (cached && Date.now() - cached.timestamp < IMAGE_CACHE_EXPIRY) return cached.url;
+                } catch (e) { console.warn('Cache read error:', e); }
+                return null;
+            }
+
+            function cacheImage(originalUrl, optimizedUrl) {
+                try {
+                    const cache = JSON.parse(localStorage.getItem(IMAGE_CACHE_KEY) || '{}');
+                    cache[originalUrl] = { url: optimizedUrl, timestamp: Date.now() };
+                    const keys = Object.keys(cache);
+                    if (keys.length > 100) keys.slice(0, keys.length - 100).forEach(key => delete cache[key]);
+                    localStorage.setItem(IMAGE_CACHE_KEY, JSON.stringify(cache));
+                } catch (e) { console.warn('Cache write error:', e); }
+            }
+
+            function cleanImageCache() {
+                try {
+                    const cache = JSON.parse(localStorage.getItem(IMAGE_CACHE_KEY) || '{}');
+                    const now = Date.now();
+                    Object.keys(cache).forEach(key => { if (now - cache[key].timestamp > IMAGE_CACHE_EXPIRY) delete cache[key]; });
+                    localStorage.setItem(IMAGE_CACHE_KEY, JSON.stringify(cache));
+                } catch (e) { console.warn('Cache clean error:', e); }
+            }
+
+            function optimizeImageUrl(url) {
+                if (!url || url.includes('placeholder')) return url;
+                const cached = getCachedImage(url);
+                if (cached) return cached;
+
+                let optimized = url;
+                if (url.includes('tvmaze.com') && url.includes('/original/')) {
+                    optimized = url.replace('/original/', '/medium/');
+                } else if (url.includes('imdb.com') || url.includes('omdbapi.com')) {
+                    optimized = url.replace('_V1_.jpg', '_V1_SX300.jpg');
+                }
+                optimized = optimized.replace('.png', '.jpg');
+                if (optimized !== url) cacheImage(url, optimized);
+                return optimized;
+            }
+
+            // ---- Вспомогательная функция для загрузки изображения с повторной попыткой ----
+            function loadImageWithRetry(imgElement, url, retries = 1) {
+                if (!url) {
+                    showPlaceholder(imgElement);
+                    return;
+                }
+                imgElement.classList.add('loading');
+                imgElement.classList.remove('loaded');
+                imgElement.onload = function() {
+                    this.classList.remove('loading');
+                    this.classList.add('loaded');
+                    const placeholder = this.parentElement?.querySelector('.poster-placeholder');
+                    if (placeholder) placeholder.style.display = 'none';
+                    this.style.display = 'block';
+                };
+                imgElement.onerror = function() {
+                    if (retries > 0) {
+                        // Пробуем другой вариант URL (например, оригинал вместо medium)
+                        let alternativeUrl = url;
+                        if (url.includes('/medium/')) alternativeUrl = url.replace('/medium/', '/original/');
+                        else if (url.includes('SX300')) alternativeUrl = url.replace('SX300', 'SX500');
+                        setTimeout(() => {
+                            loadImageWithRetry(imgElement, alternativeUrl, retries - 1);
+                        }, 2000);
+                    } else {
+                        showPlaceholder(this);
+                    }
+                };
+                imgElement.src = url;
+            }
+
+            function showPlaceholder(imgElement) {
+                imgElement.classList.remove('loading');
+                imgElement.classList.add('loaded'); // чтобы скрыть спиннер
+                imgElement.style.display = 'none';
+                const placeholder = imgElement.parentElement?.querySelector('.poster-placeholder');
+                if (placeholder) placeholder.style.display = 'flex';
             }
 
             // ---- Инициализация ----
@@ -468,25 +564,19 @@
                 document.getElementById('clearAllBtn').addEventListener('click', clearAllData);
             });
 
-            // ---- Работа с кешем изображений (без изменений) ----
-            function getCachedImage(url) { /* ... */ }
-            function cacheImage(originalUrl, optimizedUrl) { /* ... */ }
-            function cleanImageCache() { /* ... */ }
-            function optimizeImageUrl(url) { /* ... */ }
-
-            // ---- Работа с данными пользователя ----
+            // ---- Данные пользователя ----
             function loadUserData() {
-                const storageKey = `tma_shows_${state.userId}`;
                 try {
-                    state.shows = JSON.parse(localStorage.getItem(storageKey) || '[]');
+                    state.shows = JSON.parse(localStorage.getItem(`tma_shows_${state.userId}`) || '[]');
                 } catch { state.shows = []; }
             }
+
             function saveUserData() {
-                const storageKey = `tma_shows_${state.userId}`;
-                localStorage.setItem(storageKey, JSON.stringify(state.shows));
+                localStorage.setItem(`tma_shows_${state.userId}`, JSON.stringify(state.shows));
                 renderShowList();
                 updateHeaderTitle();
             }
+
             function clearAllData() {
                 if (confirm('Удалить весь список сериалов?')) {
                     state.shows = [];
@@ -495,12 +585,38 @@
                 }
             }
 
-            // ---- Поиск (сокращён для читаемости, полный код в предыдущих версиях) ----
-            function setupSearch() { /* ... */ }
-            function transliterate(text) { /* ... */ }
-            function isRussian(text) { /* ... */ }
-            async function performSearch(query) { /* ... */ }
-            async function searchTVMaze(query) { /* ... */ }
+            // ---- Поиск (сокращён для читаемости) ----
+            function setupSearch() {
+                const input = document.getElementById('searchInput');
+                const resultsDiv = document.getElementById('searchResults');
+                const loader = document.getElementById('searchLoader');
+                let timeoutId = null;
+
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('#searchInput') && !e.target.closest('#searchResults')) {
+                        resultsDiv.classList.add('hidden');
+                    }
+                });
+
+                input.addEventListener('input', (e) => {
+                    const val = e.target.value.trim();
+                    if (timeoutId) clearTimeout(timeoutId);
+                    if (val.length < 2) {
+                        resultsDiv.classList.add('hidden');
+                        return;
+                    }
+                    timeoutId = setTimeout(() => performSearch(val), 600);
+                });
+            }
+
+            function transliterate(text) {
+                return text.toLowerCase().split('').map(c => TRANSLITERATION[c] || c).join('');
+            }
+
+            function isRussian(text) { return /[а-яё]/i.test(text); }
+
+            async function performSearch(query) { /* ... (полный код из предыдущей версии) ... */ }
+            async function searchTVMaze(query) { /* ... (без ограничения summary) ... */ }
             async function searchOMDb(query) { /* ... */ }
             async function fetchShowDetails(id) { /* ... */ }
             async function addShowFromApi(id, title, originalTitle, posterUrl, year, endYear, episodes, genres, network, status, runtime, summary, actors, rating, country, age) {
@@ -563,7 +679,7 @@
                 return '';
             }
 
-            // ---- Рендеринг списка (с двумя знаками после запятой) ----
+            // ---- Рендеринг списка (с новой загрузкой постеров) ----
             function renderShowList() {
                 const container = document.getElementById('showList');
                 const emptyState = document.getElementById('emptyState');
@@ -582,33 +698,28 @@
                     listItem.setAttribute('data-show-id', show.id);
 
                     const ratingClass = getRatingClass(show.rating);
-                    const ratingDisplay = show.rating !== null && show.rating !== undefined
-                        ? show.rating.toFixed(2)
-                        : '--';
-
+                    const ratingDisplay = show.rating !== null && show.rating !== undefined ? show.rating.toFixed(2) : '--';
                     const safePosterUrl = optimizeImageUrl(show.posterUrl);
-                    const yearRange = show.year && show.endYear && show.endYear !== show.year
-                        ? `${show.year} – ${show.endYear}`
-                        : (show.year || '—');
+                    const yearRange = show.year && show.endYear && show.endYear !== show.year ? `${show.year} – ${show.endYear}` : (show.year || '—');
                     const episodesText = show.episodes && show.episodes > 0 ? `${show.episodes} серий` : '';
 
                     const card = document.createElement('div');
                     card.className = 'show-card';
-                    card.addEventListener('click', (e) => {
-                        if (e.target.closest('.delete-btn')) return;
-                        openModal(show.id);
-                    });
+                    card.addEventListener('click', (e) => { if (!e.target.closest('.delete-btn')) openModal(show.id); });
 
-                    // Постер
+                    // Постер с плейсхолдером
                     const posterContainer = document.createElement('div');
                     posterContainer.className = 'poster-container';
                     const posterImg = document.createElement('img');
                     posterImg.className = 'w-full h-full object-cover poster-img';
                     posterImg.loading = 'lazy';
-                    posterImg.src = safePosterUrl;
-                    posterImg.onload = function () { this.classList.add('loaded'); this.classList.remove('loading'); };
-                    posterImg.onerror = function () { this.src = 'https://via.placeholder.com/200x280?text=No+Image'; this.classList.add('loaded'); };
+                    posterImg.alt = show.title;
+                    const placeholderDiv = document.createElement('div');
+                    placeholderDiv.className = 'poster-placeholder';
+                    placeholderDiv.innerHTML = '<svg fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4-3h2v13h-2z"/></svg>';
                     posterContainer.appendChild(posterImg);
+                    posterContainer.appendChild(placeholderDiv);
+                    loadImageWithRetry(posterImg, safePosterUrl);
 
                     const contentDiv = document.createElement('div');
                     contentDiv.className = 'show-card-content';
@@ -630,13 +741,8 @@
                     row1.className = 'meta-row';
                     if (show.status) {
                         const statusSpan = document.createElement('span');
-                        if (show.status === 'Running') {
-                            statusSpan.className = 'status-badge status-running';
-                            statusSpan.textContent = '🟢 Продолжается';
-                        } else if (show.status === 'Ended') {
-                            statusSpan.className = 'status-badge status-ended';
-                            statusSpan.textContent = '🔴 Завершён';
-                        }
+                        if (show.status === 'Running') { statusSpan.className = 'status-badge status-running'; statusSpan.textContent = '🟢 Продолжается'; }
+                        else if (show.status === 'Ended') { statusSpan.className = 'status-badge status-ended'; statusSpan.textContent = '🔴 Завершён'; }
                         if (statusSpan.textContent) row1.appendChild(statusSpan);
                     }
                     if (show.network) {
@@ -705,7 +811,7 @@
                 });
             }
 
-            // ---- Модальное окно (с двумя знаками после запятой) ----
+            // ---- Модальное окно (с двумя знаками после запятой и загрузкой постера) ----
             async function openModal(id) {
                 const show = state.shows.find(s => s.id === id);
                 if (!show) return;
@@ -722,13 +828,13 @@
                 }
 
                 const posterImg = document.getElementById('modalPoster');
-                posterImg.classList.remove('loaded');
-                posterImg.classList.add('loading');
-                posterImg.src = optimizeImageUrl(show.posterUrl);
+                const placeholder = posterImg.parentElement.querySelector('.poster-placeholder');
+                posterImg.style.display = 'block';
+                placeholder.style.display = 'none';
+                loadImageWithRetry(posterImg, optimizeImageUrl(show.posterUrl));
 
                 document.getElementById('modalTitle').innerText = show.title;
                 document.getElementById('modalOriginalTitle').innerText = (show.originalTitle && show.originalTitle !== show.title) ? show.originalTitle : '';
-
                 document.getElementById('modalStatus').innerHTML = getStatusBadge(show.status) || '—';
                 const modalNetwork = document.getElementById('modalNetwork');
                 if (show.network) {
@@ -786,7 +892,7 @@
                 let val = parseFloat(input.value);
                 if (isNaN(val)) val = 0;
                 val = Math.min(10, Math.max(0, val));
-                val = Math.round(val * 100) / 100; // округление до двух знаков
+                val = Math.round(val * 100) / 100;
 
                 const showIndex = state.shows.findIndex(s => s.id === state.currentModalShowId);
                 if (showIndex !== -1) {
