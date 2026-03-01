@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* Все стили без изменений (такие же, как в предыдущей версии) */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #0f0f0f;
@@ -506,8 +507,8 @@
                 return optimized;
             }
 
-            // ---- Улучшенная загрузка изображения с повторными попытками ----
-            function loadImageWithRetry(imgElement, url, attempt = 1, maxAttempts = 4) {
+            // ---- Бесконечные попытки загрузки изображения ----
+            function loadImageWithRetry(imgElement, url, attempt = 1) {
                 if (!url) {
                     showPlaceholder(imgElement);
                     return;
@@ -522,29 +523,28 @@
 
                 function handleError() {
                     clearTimeout(timeoutId);
-                    if (attempt < maxAttempts) {
-                        let nextUrl = url;
-                        if (url.includes('/medium/')) {
-                            nextUrl = url.replace('/medium/', '/original/');
-                        } else if (url.includes('SX300')) {
-                            nextUrl = url.replace('SX300', 'SX500');
-                        } else {
-                            nextUrl = url; // та же ссылка, но с задержкой
-                        }
-                        const delay = 2000 * Math.pow(2, attempt - 1); // 2, 4, 8 сек
-                        setTimeout(() => {
-                            loadImageWithRetry(imgElement, nextUrl, attempt + 1, maxAttempts);
-                        }, delay);
+                    // Бесконечные попытки с увеличивающейся задержкой (но не более 30 сек)
+                    let nextUrl = url;
+                    if (url.includes('/medium/')) {
+                        nextUrl = url.replace('/medium/', '/original/');
+                    } else if (url.includes('SX300')) {
+                        nextUrl = url.replace('SX300', 'SX500');
+                    } else if (url.includes('/original/')) {
+                        nextUrl = url.replace('/original/', '/medium/');
                     } else {
-                        showPlaceholder(imgElement);
+                        nextUrl = url; // та же ссылка
                     }
+                    // Экспоненциальная задержка, но не более 30 секунд
+                    const delay = Math.min(2000 * Math.pow(1.5, attempt - 1), 30000);
+                    setTimeout(() => {
+                        loadImageWithRetry(imgElement, nextUrl, attempt + 1);
+                    }, delay);
                 }
 
                 imgElement.classList.add('loading');
                 imgElement.classList.remove('loaded');
                 imgElement.onload = function() {
                     clearTimeout(timeoutId);
-                    // Проверка на пустое изображение (иногда приходят нулевые размеры)
                     if (this.naturalWidth === 0 || this.naturalHeight === 0) {
                         handleError();
                         return;
