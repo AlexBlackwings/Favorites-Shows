@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* ... все стили без изменений, как в предыдущем ответе ... */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #0f0f0f;
@@ -51,7 +52,7 @@
         .delete-btn {
             transition: transform 0.2s, background-color 0.2s;
             cursor: pointer;
-            min-width: 44px;            /* как у rating-badge */
+            min-width: 44px;
             padding: 4px 8px;
             border-radius: 6px;
             font-weight: 700;
@@ -82,7 +83,7 @@
             height: 140px;
             flex-shrink: 0;
         }
-        /* Убрана анимация и псевдоэлемент ::before */
+        /* Анимация удалена */
 
         .poster-img {
             transition: opacity 0.3s ease;
@@ -178,7 +179,6 @@
             align-items: center;
         }
 
-        /* Строки метаданных */
         .meta-row {
             display: flex;
             flex-wrap: wrap;
@@ -289,10 +289,9 @@
         <div id="showList" class="px-4 py-4">
         </div>
 
-        <!-- Блок "Ваша ссылка" полностью удалён -->
     </main>
 
-    <!-- Модальное окно с расширенной информацией (без возраста и страны) -->
+    <!-- Модальное окно -->
     <div id="detailModal" class="fixed inset-0 z-50 hidden">
         <div class="modal-backdrop absolute inset-0" onclick="closeModal()"></div>
         
@@ -326,19 +325,19 @@
                 </div>
             </div>
 
-            <!-- Жанры (переведённые) -->
+            <!-- Жанры -->
             <div class="mb-4">
                 <label class="block text-xs text-gray-400 mb-2 uppercase tracking-wider font-bold">Жанры</label>
                 <div id="modalGenres" class="flex flex-wrap gap-2"></div>
             </div>
 
-            <!-- Описание (полное, без ограничений) -->
+            <!-- Сюжет (полный) -->
             <div class="mb-4">
                 <label class="block text-xs text-gray-400 mb-2 uppercase tracking-wider font-bold">Сюжет</label>
                 <p id="modalSummary" class="text-sm text-gray-300 leading-relaxed"></p>
             </div>
 
-            <!-- Актёры (оригинал) -->
+            <!-- Актёры -->
             <div class="mb-4">
                 <label class="block text-xs text-gray-400 mb-2 uppercase tracking-wider font-bold">В главных ролях</label>
                 <p id="modalActors" class="text-sm text-gray-300"></p>
@@ -379,7 +378,6 @@
             const IMAGE_CACHE_KEY = 'tma_image_cache';
             const IMAGE_CACHE_EXPIRY = 7 * 24 * 60 * 60 * 1000;
 
-            // Словарь для перевода жанров (английский -> русский)
             const GENRE_TRANSLATIONS = {
                 'Drama': 'Драма',
                 'Comedy': 'Комедия',
@@ -481,7 +479,6 @@
                 currentModalShowId: null
             };
 
-            // ---- Функция склонения слова "сериал" ----
             function getSeriesWord(count) {
                 if (count % 10 === 1 && count % 100 !== 11) {
                     return 'сериала';
@@ -611,7 +608,7 @@
                 }
             }
 
-            // ---- Поиск (создание элементов через DOM) ----
+            // ---- Поиск ----
             function setupSearch() {
                 const input = document.getElementById('searchInput');
                 const resultsDiv = document.getElementById('searchResults');
@@ -836,7 +833,7 @@
                         let summary = '';
                         if (item.show.summary) {
                             summary = item.show.summary.replace(/<[^>]*>/g, '').trim();
-                            // Убрано ограничение длины — сохраняем полный текст
+                            // Без ограничения длины
                         }
 
                         return {
@@ -890,6 +887,7 @@
                     }));
             }
 
+            // Обновлённая функция fetchShowDetails теперь возвращает также summary
             async function fetchShowDetails(id) {
                 if (id.startsWith('tvmaze_')) {
                     const tvmazeId = id.replace('tvmaze_', '');
@@ -900,6 +898,11 @@
                         let actors = '';
                         if (data._embedded && data._embedded.cast && data._embedded.cast.length > 0) {
                             actors = data._embedded.cast.slice(0, 4).map(c => c.person.name).join(', ');
+                        }
+
+                        let summary = '';
+                        if (data.summary) {
+                            summary = data.summary.replace(/<[^>]*>/g, '').trim();
                         }
 
                         let imdbRating = null;
@@ -926,6 +929,7 @@
 
                         return {
                             actors: actors,
+                            summary: summary,
                             imdbRating: imdbRating,
                             ageRating: ageRating,
                             totalSeasons: totalSeasons
@@ -957,7 +961,7 @@
                         network: network || '',
                         status: status || '',
                         runtime: runtime ? parseInt(runtime) : 0,
-                        summary: summary || '',
+                        summary: (details && details.summary) ? details.summary : (summary || ''),
                         actors: (details && details.actors) ? details.actors : (actors || ''),
                         country: country || '',
                         age: (details && details.ageRating) ? details.ageRating : (age || ''),
@@ -1013,7 +1017,7 @@
                 return '';
             }
 
-            // ---- Рендеринг списка (с тремя строками метаданных) ----
+            // ---- Рендеринг списка ----
             function renderShowList() {
                 const container = document.getElementById('showList');
                 const emptyState = document.getElementById('emptyState');
@@ -1059,7 +1063,6 @@
                         openModal(show.id);
                     });
 
-                    // Постер
                     const posterContainer = document.createElement('div');
                     posterContainer.className = 'poster-container';
                     
@@ -1071,7 +1074,6 @@
                     posterImg.onerror = function() { this.src = 'https://via.placeholder.com/200x280?text=No+Image'; this.classList.add('loaded'); };
                     posterContainer.appendChild(posterImg);
                     
-                    // Контент (середина)
                     const contentDiv = document.createElement('div');
                     contentDiv.className = 'show-card-content';
                     
@@ -1087,7 +1089,7 @@
                         contentDiv.appendChild(orig);
                     }
                     
-                    // ---- Ряд 1: статус и платформа ----
+                    // Ряд 1: статус и платформа
                     const row1 = document.createElement('div');
                     row1.className = 'meta-row';
                     if (show.status) {
@@ -1109,11 +1111,9 @@
                         netSpan.textContent = `📺 ${show.network}`;
                         row1.appendChild(netSpan);
                     }
-                    if (row1.children.length > 0) {
-                        contentDiv.appendChild(row1);
-                    }
+                    if (row1.children.length > 0) contentDiv.appendChild(row1);
                     
-                    // ---- Ряд 2: жанры ----
+                    // Ряд 2: жанры
                     const row2 = document.createElement('div');
                     row2.className = 'meta-row';
                     if (show.genres && show.genres.length > 0) {
@@ -1124,11 +1124,9 @@
                             row2.appendChild(genreSpan);
                         });
                     }
-                    if (row2.children.length > 0) {
-                        contentDiv.appendChild(row2);
-                    }
+                    if (row2.children.length > 0) contentDiv.appendChild(row2);
                     
-                    // ---- Ряд 3: год и серии ----
+                    // Ряд 3: год и серии
                     const row3 = document.createElement('div');
                     row3.className = 'meta-row';
                     if (yearRange) {
@@ -1143,11 +1141,8 @@
                         epSpan.innerHTML = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="10" height="10"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path></svg> ${episodesText}`;
                         row3.appendChild(epSpan);
                     }
-                    if (row3.children.length > 0) {
-                        contentDiv.appendChild(row3);
-                    }
+                    if (row3.children.length > 0) contentDiv.appendChild(row3);
                     
-                    // Правая панель (номер + действия)
                     const rightDiv = document.createElement('div');
                     rightDiv.className = 'show-card-right';
                     
@@ -1182,7 +1177,7 @@
                 });
             }
 
-            // ---- Модальное окно (без возраста и страны) ----
+            // ---- Модальное окно (с обновлением сюжета) ----
             async function openModal(id) {
                 const show = state.shows.find(s => s.id === id);
                 if (!show) {
@@ -1192,13 +1187,20 @@
 
                 state.currentModalShowId = id;
 
-                if (!show.actors || show.actors === '') {
-                    const details = await fetchShowDetails(id);
+                // Всегда подгружаем свежие детали (актёры, сюжет и т.д.) при открытии
+                if (show.id.startsWith('tvmaze_')) {
+                    const details = await fetchShowDetails(show.id);
                     if (details) {
-                        show.actors = details.actors;
-                        if (details.imdbRating) show.imdbRating = details.imdbRating;
-                        if (details.ageRating) show.age = details.ageRating;
-                        if (details.totalSeasons) show.totalSeasons = details.totalSeasons;
+                        // Обновляем поля, которые могли измениться или отсутствовать
+                        if (details.actors && details.actors !== show.actors) show.actors = details.actors;
+                        if (details.summary && details.summary !== show.summary) show.summary = details.summary;
+                        if (details.imdbRating && details.imdbRating !== show.imdbRating) show.imdbRating = details.imdbRating;
+                        if (details.ageRating && details.ageRating !== show.age) show.age = details.ageRating;
+                        if (details.totalSeasons && details.totalSeasons !== show.totalSeasons) show.totalSeasons = details.totalSeasons;
+                        
+                        // Сохраняем обновлённые данные (опционально)
+                        // Можно не сохранять постоянно, но для единообразия сохраним
+                        saveUserData();
                     }
                 }
 
@@ -1305,12 +1307,10 @@
                 }
             }
 
-            // Функция shareProfile больше не используется, но оставим для совместимости
             function shareProfile() {
                 console.warn('shareProfile called but removed');
             }
 
-            // Экспорт функций в глобальную область
             window.openModal = openModal;
             window.closeModal = closeModal;
             window.enableEditRating = enableEditRating;
