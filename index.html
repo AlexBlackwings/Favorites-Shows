@@ -82,19 +82,7 @@
             height: 140px;
             flex-shrink: 0;
         }
-        .poster-container::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(45deg, #1a1a2e 25%, #16213e 25%, #16213e 50%, #1a1a2e 50%, #1a1a2e 75%, #16213e 75%, #16213e 100%);
-            background-size: 20px 20px;
-            opacity: 0.3;
-            animation: shimmer 1.5s infinite;
-        }
-        @keyframes shimmer {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(20px); }
-        }
+        /* Убрана анимация и псевдоэлемент ::before */
 
         .poster-img {
             transition: opacity 0.3s ease;
@@ -344,7 +332,7 @@
                 <div id="modalGenres" class="flex flex-wrap gap-2"></div>
             </div>
 
-            <!-- Описание (оригинал) -->
+            <!-- Описание (полное, без ограничений) -->
             <div class="mb-4">
                 <label class="block text-xs text-gray-400 mb-2 uppercase tracking-wider font-bold">Сюжет</label>
                 <p id="modalSummary" class="text-sm text-gray-300 leading-relaxed"></p>
@@ -848,7 +836,7 @@
                         let summary = '';
                         if (item.show.summary) {
                             summary = item.show.summary.replace(/<[^>]*>/g, '').trim();
-                            if (summary.length > 200) summary = summary.substring(0, 200) + '...';
+                            // Убрано ограничение длины — сохраняем полный текст
                         }
 
                         return {
