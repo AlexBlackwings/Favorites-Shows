@@ -190,13 +190,15 @@
             align-items: center;
         }
 
-        .meta-info {
+        /* Строки метаданных */
+        .meta-row {
             display: flex;
             flex-wrap: wrap;
             gap: 6px;
             margin-top: 6px;
             align-items: center;
         }
+
         .meta-tag {
             font-size: 10px;
             color: #9ca3af;
@@ -1023,7 +1025,7 @@
                 return '';
             }
 
-            // ---- Рендеринг списка (новая версия с единым контейнером мета-тегов) ----
+            // ---- Рендеринг списка (с тремя строками метаданных) ----
             function renderShowList() {
                 const container = document.getElementById('showList');
                 const emptyState = document.getElementById('emptyState');
@@ -1097,11 +1099,9 @@
                         contentDiv.appendChild(orig);
                     }
                     
-                    // Единый контейнер для всех мета-тегов
-                    const metaContainer = document.createElement('div');
-                    metaContainer.className = 'meta-info';
-                    
-                    // Статус
+                    // ---- Ряд 1: статус и платформа ----
+                    const row1 = document.createElement('div');
+                    row1.className = 'meta-row';
                     if (show.status) {
                         const statusSpan = document.createElement('span');
                         if (show.status === 'Running') {
@@ -1112,46 +1112,51 @@
                             statusSpan.textContent = '🔴 Завершён';
                         }
                         if (statusSpan.textContent) {
-                            metaContainer.appendChild(statusSpan);
+                            row1.appendChild(statusSpan);
                         }
                     }
-                    
-                    // Платформа
                     if (show.network) {
                         const netSpan = document.createElement('span');
                         netSpan.className = 'platform-tag';
                         netSpan.textContent = `📺 ${show.network}`;
-                        metaContainer.appendChild(netSpan);
+                        row1.appendChild(netSpan);
+                    }
+                    if (row1.children.length > 0) {
+                        contentDiv.appendChild(row1);
                     }
                     
-                    // Жанры (переведённые)
+                    // ---- Ряд 2: жанры ----
+                    const row2 = document.createElement('div');
+                    row2.className = 'meta-row';
                     if (show.genres && show.genres.length > 0) {
                         show.genres.slice(0, 3).forEach(g => {
                             const genreSpan = document.createElement('span');
                             genreSpan.className = 'genre-tag';
                             genreSpan.textContent = translateGenre(g);
-                            metaContainer.appendChild(genreSpan);
+                            row2.appendChild(genreSpan);
                         });
                     }
+                    if (row2.children.length > 0) {
+                        contentDiv.appendChild(row2);
+                    }
                     
-                    // Год
+                    // ---- Ряд 3: год и серии ----
+                    const row3 = document.createElement('div');
+                    row3.className = 'meta-row';
                     if (yearRange) {
                         const yearSpan = document.createElement('span');
                         yearSpan.className = 'meta-tag';
                         yearSpan.innerHTML = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="10" height="10"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg> ${yearRange}`;
-                        metaContainer.appendChild(yearSpan);
+                        row3.appendChild(yearSpan);
                     }
-                    
-                    // Количество серий
                     if (episodesText) {
                         const epSpan = document.createElement('span');
                         epSpan.className = 'meta-tag';
                         epSpan.innerHTML = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="10" height="10"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path></svg> ${episodesText}`;
-                        metaContainer.appendChild(epSpan);
+                        row3.appendChild(epSpan);
                     }
-                    
-                    if (metaContainer.children.length > 0) {
-                        contentDiv.appendChild(metaContainer);
+                    if (row3.children.length > 0) {
+                        contentDiv.appendChild(row3);
                     }
                     
                     // Правая панель (номер + действия)
