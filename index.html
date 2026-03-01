@@ -222,7 +222,7 @@
             border-radius: 4px;
         }
 
-        /* Исправление для скрытия результатов */
+        /* Скрытие результатов */
         #searchResults.hidden {
             display: none !important;
         }
@@ -282,7 +282,7 @@
         </div>
     </main>
 
-    <!-- Модальное окно с расширенной информацией -->
+    <!-- Модальное окно с расширенной информацией (без возраста и страны) -->
     <div id="detailModal" class="fixed inset-0 z-50 hidden">
         <div class="modal-backdrop absolute inset-0" onclick="closeModal()"></div>
         
@@ -316,34 +316,22 @@
                 </div>
             </div>
 
-            <!-- Жанры -->
+            <!-- Жанры (переведённые) -->
             <div class="mb-4">
                 <label class="block text-xs text-gray-400 mb-2 uppercase tracking-wider font-bold">Жанры</label>
                 <div id="modalGenres" class="flex flex-wrap gap-2"></div>
             </div>
 
-            <!-- Описание -->
+            <!-- Описание (оригинал, но можно подключить перевод) -->
             <div class="mb-4">
                 <label class="block text-xs text-gray-400 mb-2 uppercase tracking-wider font-bold">Сюжет</label>
                 <p id="modalSummary" class="text-sm text-gray-300 leading-relaxed"></p>
             </div>
 
-            <!-- Актёры -->
+            <!-- Актёры (оригинал) -->
             <div class="mb-4">
                 <label class="block text-xs text-gray-400 mb-2 uppercase tracking-wider font-bold">В главных ролях</label>
                 <p id="modalActors" class="text-sm text-gray-300"></p>
-            </div>
-
-            <!-- Возраст и страна -->
-            <div class="flex gap-4 mb-4">
-                <div class="flex-1">
-                    <label class="block text-xs text-gray-400 mb-2 uppercase tracking-wider font-bold">Возраст</label>
-                    <p id="modalAge" class="text-sm text-gray-300">—</p>
-                </div>
-                <div class="flex-1">
-                    <label class="block text-xs text-gray-400 mb-2 uppercase tracking-wider font-bold">Страна</label>
-                    <p id="modalCountry" class="text-sm text-gray-300">—</p>
-                </div>
             </div>
 
             <!-- Поле оценки -->
@@ -374,12 +362,53 @@
 
     <script>
         (function() {
-            // ---- Константы и вспомогательные функции (без изменений) ----
+            // ---- Константы и вспомогательные функции ----
             const TVMAZE_BASE_URL = 'https://api.tvmaze.com';
             const OMDB_BASE_URL = 'https://www.omdbapi.com';
 
             const IMAGE_CACHE_KEY = 'tma_image_cache';
             const IMAGE_CACHE_EXPIRY = 7 * 24 * 60 * 60 * 1000;
+
+            // Словарь для перевода жанров (английский -> русский)
+            const GENRE_TRANSLATIONS = {
+                'Drama': 'Драма',
+                'Comedy': 'Комедия',
+                'Action': 'Боевик',
+                'Adventure': 'Приключения',
+                'Crime': 'Криминал',
+                'Mystery': 'Мистика',
+                'Thriller': 'Триллер',
+                'Horror': 'Ужасы',
+                'Romance': 'Мелодрама',
+                'Science-Fiction': 'Фантастика',
+                'Fantasy': 'Фэнтези',
+                'Family': 'Семейный',
+                'Animation': 'Анимация',
+                'Documentary': 'Документальный',
+                'History': 'История',
+                'War': 'Военный',
+                'Music': 'Музыка',
+                'Western': 'Вестерн',
+                'Sport': 'Спорт',
+                'Reality': 'Реалити-шоу',
+                'Talk Show': 'Ток-шоу',
+                'News': 'Новости',
+                'Soap': 'Мыльная опера',
+                'Sitcom': 'Ситком',
+                'Medical': 'Медицинский',
+                'Legal': 'Юридический',
+                'Political': 'Политический',
+                'Supernatural': 'Сверхъестественное',
+                'Teen': 'Подростковый',
+                'Post-Apocalyptic': 'Постапокалипсис',
+                'Space': 'Космос',
+                'Detective': 'Детектив'
+            };
+
+            // Функция перевода жанра
+            function translateGenre(genreEn) {
+                return GENRE_TRANSLATIONS[genreEn] || genreEn; // если нет перевода, оставляем оригинал
+            }
 
             const TRANSLITERATION = {
                 'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
@@ -469,11 +498,10 @@
                 renderShowList();
                 setupSearch();
 
-                // Кнопка сброса
                 document.getElementById('clearAllBtn').addEventListener('click', clearAllData);
             });
 
-            // ---- Работа с кешем изображений (без изменений) ----
+            // ---- Работа с кешем изображений ----
             function getCachedImage(url) {
                 try {
                     const cache = JSON.parse(localStorage.getItem(IMAGE_CACHE_KEY) || '{}');
@@ -561,20 +589,17 @@
                 }
             }
 
-            // ---- Поиск (полностью переписан с созданием элементов через DOM) ----
+            // ---- Поиск (создание элементов через DOM) ----
             function setupSearch() {
                 const input = document.getElementById('searchInput');
                 const resultsDiv = document.getElementById('searchResults');
                 const loader = document.getElementById('searchLoader');
                 let timeoutId = null;
 
-                // Закрытие результатов при клике вне
                 document.addEventListener('click', (e) => {
-                    // Если клик был внутри input или results, ничего не делаем
                     if (e.target.closest('#searchInput') || e.target.closest('#searchResults')) {
                         return;
                     }
-                    // Иначе скрываем результаты
                     resultsDiv.classList.add('hidden');
                 });
 
@@ -609,7 +634,7 @@
                 const loader = document.getElementById('searchLoader');
                 
                 loader.classList.remove('hidden');
-                resultsDiv.innerHTML = ''; // очищаем
+                resultsDiv.innerHTML = '';
                 resultsDiv.classList.remove('hidden');
 
                 try {
@@ -661,7 +686,7 @@
                     }
 
                     loader.classList.add('hidden');
-                    resultsDiv.innerHTML = ''; // очищаем
+                    resultsDiv.innerHTML = '';
 
                     if (allResults.length === 0) {
                         const emptyDiv = document.createElement('div');
@@ -677,11 +702,9 @@
                         const posterUrl = optimizeImageUrl(show.posterUrl);
                         const year = show.year ? `(${show.year})` : '';
 
-                        // Создаём элемент результата
                         const item = document.createElement('div');
                         item.className = 'flex items-center gap-3 p-3 border-b border-white/5 hover:bg-white/5 transition-colors';
                         
-                        // Постер
                         const posterContainer = document.createElement('div');
                         posterContainer.className = 'poster-container';
                         posterContainer.style.width = '48px';
@@ -695,7 +718,6 @@
                         posterImg.onerror = function() { this.src = 'https://via.placeholder.com/150x220?text=Error'; this.classList.add('loaded'); };
                         posterContainer.appendChild(posterImg);
                         
-                        // Информация
                         const infoDiv = document.createElement('div');
                         infoDiv.className = 'flex-1 min-w-0';
                         
@@ -710,7 +732,6 @@
                         infoDiv.appendChild(titleDiv);
                         infoDiv.appendChild(yearDiv);
                         
-                        // Кнопка
                         const btn = document.createElement('button');
                         btn.className = 'px-3 py-1.5 rounded-md text-xs font-bold uppercase transition-colors';
                         if (exists) {
@@ -761,7 +782,6 @@
                 }
             }
 
-            // ---- Функции поиска по API (без изменений) ----
             async function searchTVMaze(query) {
                 const response = await fetch(`${TVMAZE_BASE_URL}/search/shows?q=${encodeURIComponent(query)}`);
                 if (!response.ok) throw new Error(`TVMaze: ${response.status}`);
@@ -789,6 +809,7 @@
                             network = item.show.webChannel.name;
                         }
 
+                        // Жанры пока оставляем английскими, переведём позже при отображении
                         const genres = (item.show.genres || []).slice(0, 3);
 
                         let summary = '';
@@ -899,6 +920,9 @@
                 if (!state.shows.find(s => s.id === id)) {
                     const details = await fetchShowDetails(id);
                     
+                    // Сохраняем жанры в исходном виде, переведём при отображении
+                    const genresArray = genres ? genres.split(',').map(g => g.trim()) : [];
+                    
                     state.shows.push({
                         id: id,
                         title: title,
@@ -909,7 +933,7 @@
                         year: year || '',
                         endYear: endYear || '',
                         episodes: episodes ? parseInt(episodes) : 0,
-                        genres: genres ? genres.split(',') : [],
+                        genres: genresArray,
                         network: network || '',
                         status: status || '',
                         runtime: runtime ? parseInt(runtime) : 0,
@@ -930,7 +954,6 @@
                 }
             }
 
-            // ---- Удаление сериала ----
             function removeShow(event, id) {
                 event.preventDefault();
                 event.stopPropagation();
@@ -954,7 +977,6 @@
                 }
             }
 
-            // ---- Вспомогательные функции для отображения ----
             function getRatingClass(rating) {
                 if (rating === null || rating === undefined) return 'rating-none';
                 if (rating >= 7.5) return 'rating-high';
@@ -971,7 +993,7 @@
                 return '';
             }
 
-            // ---- Рендеринг списка (полностью через DOM) ----
+            // ---- Рендеринг списка (с переводом жанров) ----
             function renderShowList() {
                 const container = document.getElementById('showList');
                 const emptyState = document.getElementById('emptyState');
@@ -1014,16 +1036,13 @@
                         ? `${show.episodes} серий` 
                         : '';
 
-                    // Карточка
                     const card = document.createElement('div');
                     card.className = 'show-card';
                     card.addEventListener('click', (e) => {
-                        // Если клик по кнопке удаления, ничего не делаем
                         if (e.target.closest('.delete-btn')) return;
                         openModal(show.id);
                     });
 
-                    // Постер
                     const posterContainer = document.createElement('div');
                     posterContainer.className = 'poster-container';
                     
@@ -1035,7 +1054,6 @@
                     posterImg.onerror = function() { this.src = 'https://via.placeholder.com/200x280?text=No+Image'; this.classList.add('loaded'); };
                     posterContainer.appendChild(posterImg);
                     
-                    // Контент
                     const contentDiv = document.createElement('div');
                     contentDiv.className = 'show-card-content';
                     
@@ -1051,7 +1069,6 @@
                         contentDiv.appendChild(orig);
                     }
                     
-                    // Мета-информация (статус, платформа)
                     const metaDiv1 = document.createElement('div');
                     metaDiv1.className = 'meta-info';
                     if (show.status) {
@@ -1070,20 +1087,19 @@
                     }
                     if (metaDiv1.children.length > 0) contentDiv.appendChild(metaDiv1);
                     
-                    // Жанры
+                    // Жанры с переводом
                     if (show.genres && show.genres.length > 0) {
                         const metaDiv2 = document.createElement('div');
                         metaDiv2.className = 'meta-info';
                         show.genres.slice(0, 3).forEach(g => {
                             const genre = document.createElement('span');
                             genre.className = 'genre-tag';
-                            genre.textContent = g;
+                            genre.textContent = translateGenre(g);
                             metaDiv2.appendChild(genre);
                         });
                         contentDiv.appendChild(metaDiv2);
                     }
                     
-                    // Годы и эпизоды
                     const metaDiv3 = document.createElement('div');
                     metaDiv3.className = 'meta-info';
                     
@@ -1101,7 +1117,6 @@
                     }
                     if (metaDiv3.children.length > 0) contentDiv.appendChild(metaDiv3);
                     
-                    // Блок с рейтингом и кнопкой удаления
                     const actionsDiv = document.createElement('div');
                     actionsDiv.className = 'show-card-actions';
                     
@@ -1126,7 +1141,7 @@
                 });
             }
 
-            // ---- Модальное окно (без изменений, кроме добавленных глобальных функций) ----
+            // ---- Модальное окно (без возраста и страны) ----
             async function openModal(id) {
                 const show = state.shows.find(s => s.id === id);
                 if (!show) {
@@ -1170,13 +1185,14 @@
                 document.getElementById('modalSeasons').innerText = show.totalSeasons ? `📀 ${show.totalSeasons} сез.` : '';
                 document.getElementById('modalSeasons').style.display = show.totalSeasons ? 'inline' : 'none';
                 
+                // Жанры с переводом
                 const genresContainer = document.getElementById('modalGenres');
                 genresContainer.innerHTML = '';
                 if (show.genres && show.genres.length > 0) {
                     show.genres.forEach(g => {
                         const tag = document.createElement('span');
                         tag.className = 'genre-tag';
-                        tag.innerText = g;
+                        tag.innerText = translateGenre(g);
                         genresContainer.appendChild(tag);
                     });
                 } else {
@@ -1185,8 +1201,6 @@
                 
                 document.getElementById('modalSummary').innerText = show.summary || 'Описание отсутствует';
                 document.getElementById('modalActors').innerText = show.actors || 'Информация недоступна';
-                document.getElementById('modalAge').innerText = show.age || '—';
-                document.getElementById('modalCountry').innerText = show.country || '—';
                 
                 document.getElementById('impressionsInput').value = show.impressions || '';
                 
@@ -1267,7 +1281,7 @@
                 }
             }
 
-            // Экспортируем функции в глобальную область для вызова из HTML
+            // Экспорт функций в глобальную область
             window.openModal = openModal;
             window.closeModal = closeModal;
             window.enableEditRating = enableEditRating;
