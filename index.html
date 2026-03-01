@@ -508,35 +508,72 @@
             }
 
             // ---- Вспомогательная функция для загрузки изображения с повторной попыткой ----
-            function loadImageWithRetry(imgElement, url, retries = 1) {
-                if (!url) {
-                    showPlaceholder(imgElement);
-                    return;
-                }
-                imgElement.classList.add('loading');
-                imgElement.classList.remove('loaded');
-                imgElement.onload = function() {
-                    this.classList.remove('loading');
-                    this.classList.add('loaded');
-                    const placeholder = this.parentElement?.querySelector('.poster-placeholder');
-                    if (placeholder) placeholder.style.display = 'none';
-                    this.style.display = 'block';
-                };
-                imgElement.onerror = function() {
-                    if (retries > 0) {
-                        // Пробуем другой вариант URL (например, оригинал вместо medium)
-                        let alternativeUrl = url;
-                        if (url.includes('/medium/')) alternativeUrl = url.replace('/medium/', '/original/');
-                        else if (url.includes('SX300')) alternativeUrl = url.replace('SX300', 'SX500');
-                        setTimeout(() => {
-                            loadImageWithRetry(imgElement, alternativeUrl, retries - 1);
-                        }, 2000);
-                    } else {
-                        showPlaceholder(this);
-                    }
-                };
-                imgElement.src = url;
+// Новая функция загрузки с таймаутом и множественными попытками
+function loadImageWithRetry(imgElement, url, attempt = 1, maxAttempts = 4) {
+    if (!url) {
+        showPlaceholder(imgElement);
+        return;
+    }
+
+    // Таймаут на случай, если загрузка зависла
+    let timeoutId = setTimeout(() => {
+        if (!imgElement.classList.contains('loaded')) {
+            console.warn(`Image load timeout (attempt ${attempt})`, url);
+            handleError();
+        }
+    }, 10000); // 10 секунд
+
+    function handleError() {
+        clearTimeout(timeoutId);
+        if (attempt < maxAttempts) {
+            // Пробуем другой вариант URL или увеличиваем задержку
+            let nextUrl = url;
+            if (url.includes('/medium/')) {
+                nextUrl = url.replace('/medium/', '/original/');
+            } else if (url.includes('SX300')) {
+                nextUrl = url.replace('SX300', 'SX500');
+            } else {
+                // Если альтернатив нет, используем тот же URL, но с увеличивающейся задержкой
+                nextUrl = url;
             }
+            const delay = 2000 * Math.pow(2, attempt - 1); // 2, 4, 8 сек
+            setTimeout(() => {
+                loadImageWithRetry(imgElement, nextUrl, attempt + 1, maxAttempts);
+            }, delay);
+        } else {
+            showPlaceholder(imgElement);
+        }
+    }
+
+    imgElement.classList.add('loading');
+    imgElement.classList.remove('loaded');
+    imgElement.onload = function() {
+        clearTimeout(timeoutId);
+        // Дополнительная проверка: если изображение загружено, но очень маленькое (пустое), считаем ошибкой
+        if (this.naturalWidth === 0 || this.naturalHeight === 0) {
+            handleError();
+            return;
+        }
+        this.classList.remove('loading');
+        this.classList.add('loaded');
+        const placeholder = this.parentElement?.querySelector('.poster-placeholder');
+        if (placeholder) placeholder.style.display = 'none';
+        this.style.display = 'block';
+    };
+    imgElement.onerror = function() {
+        clearTimeout(timeoutId);
+        handleError();
+    };
+    imgElement.src = url;
+}
+
+function showPlaceholder(imgElement) {
+    imgElement.classList.remove('loading');
+    imgElement.classList.add('loaded'); // чтобы скрыть спиннер
+    imgElement.style.display = 'none';
+    const placeholder = imgElement.parentElement?.querySelector('.poster-placeholder');
+    if (placeholder) placeholder.style.display = 'flex';
+}
 
             function showPlaceholder(imgElement) {
                 imgElement.classList.remove('loading');
