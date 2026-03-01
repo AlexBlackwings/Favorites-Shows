@@ -8,7 +8,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Все стили без изменений (такие же, как в предыдущей версии) */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #0f0f0f;
@@ -450,7 +449,8 @@
             let state = {
                 userId: null,
                 shows: [],
-                currentModalShowId: null
+                currentModalShowId: null,
+                dataLoaded: false
             };
 
             function getSeriesWord(count) {
@@ -519,11 +519,10 @@
                         console.warn(`Image load timeout (attempt ${attempt})`, url);
                         handleError();
                     }
-                }, 10000); // 10 секунд
+                }, 10000);
 
                 function handleError() {
                     clearTimeout(timeoutId);
-                    // Бесконечные попытки с увеличивающейся задержкой (но не более 30 сек)
                     let nextUrl = url;
                     if (url.includes('/medium/')) {
                         nextUrl = url.replace('/medium/', '/original/');
@@ -532,9 +531,8 @@
                     } else if (url.includes('/original/')) {
                         nextUrl = url.replace('/original/', '/medium/');
                     } else {
-                        nextUrl = url; // та же ссылка
+                        nextUrl = url;
                     }
-                    // Экспоненциальная задержка, но не более 30 секунд
                     const delay = Math.min(2000 * Math.pow(1.5, attempt - 1), 30000);
                     setTimeout(() => {
                         loadImageWithRetry(imgElement, nextUrl, attempt + 1);
@@ -581,22 +579,54 @@
                 } else {
                     state.userId = 'web_' + Math.random().toString(36).substr(2, 9);
                 }
-                loadUserData();
-                updateHeaderTitle();
-                renderShowList();
+                
+                loadUserData(() => {
+                    renderShowList();
+                    updateHeaderTitle();
+                });
+                
                 setupSearch();
                 document.getElementById('clearAllBtn').addEventListener('click', clearAllData);
             });
 
-            // ---- Данные пользователя ----
-            function loadUserData() {
-                try {
-                    state.shows = JSON.parse(localStorage.getItem(`tma_shows_${state.userId}`) || '[]');
-                } catch { state.shows = []; }
+            // ---- Данные пользователя (Telegram CloudStorage) ----
+            function loadUserData(callback) {
+                const key = `tma_shows_${state.userId}`;
+                if (window.Telegram?.WebApp?.CloudStorage) {
+                    Telegram.WebApp.CloudStorage.getItem(key, (error, value) => {
+                        if (!error && value) {
+                            try {
+                                state.shows = JSON.parse(value);
+                            } catch {
+                                state.shows = [];
+                            }
+                        } else {
+                            state.shows = [];
+                        }
+                        state.dataLoaded = true;
+                        if (callback) callback();
+                    });
+                } else {
+                    try {
+                        state.shows = JSON.parse(localStorage.getItem(key) || '[]');
+                    } catch {
+                        state.shows = [];
+                    }
+                    state.dataLoaded = true;
+                    if (callback) callback();
+                }
             }
 
             function saveUserData() {
-                localStorage.setItem(`tma_shows_${state.userId}`, JSON.stringify(state.shows));
+                const key = `tma_shows_${state.userId}`;
+                const data = JSON.stringify(state.shows);
+                if (window.Telegram?.WebApp?.CloudStorage) {
+                    Telegram.WebApp.CloudStorage.setItem(key, data, (error, success) => {
+                        if (error) console.warn('CloudStorage save error:', error);
+                    });
+                } else {
+                    localStorage.setItem(key, data);
+                }
                 renderShowList();
                 updateHeaderTitle();
             }
