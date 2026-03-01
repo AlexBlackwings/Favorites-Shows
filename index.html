@@ -104,7 +104,7 @@
         .rating-low { background: rgba(107, 114, 128, 0.2); color: #9ca3af; border: 1px solid rgba(107, 114, 128, 0.3); }
         .rating-none { background: rgba(255, 255, 255, 0.05); color: #6b7280; border: 1px solid rgba(255, 255, 255, 0.1); }
 
-        /* 🔥 ПРОСТАЯ КАРТОЧКА */
+        /* Карточка сериала */
         .list-item {
             display: flex;
             flex-direction: row;
@@ -116,6 +116,7 @@
             padding: 12px;
             margin-bottom: 12px;
             transition: all 0.3s ease;
+            cursor: pointer;
         }
         .list-item:active {
             background: rgba(255, 255, 255, 0.08);
@@ -235,7 +236,7 @@
         </div>
         
         <div class="relative">
-            <input type="text" id="searchInput" placeholder="Поиск (Ведьмак, Mandalorian...)..." 
+            <input type="text" id="searchInput" placeholder="Поиск (Ведьмак, Mandalorian)..." 
                 class="w-full glass-input rounded-xl pl-4 pr-10 py-3 text-sm placeholder-gray-500 transition-all shadow-inner">
             
             <div id="searchLoader" class="absolute right-3 top-3 hidden">
@@ -937,7 +938,6 @@
                     ? `<span class="platform-tag">📺 ${show.network}</span>`
                     : '';
 
-                // 🔥 ПРОСТОЙ HTML с inline onclick
                 const item = document.createElement('div');
                 item.className = 'list-item adding';
                 item.setAttribute('data-show-id', show.id);
@@ -979,7 +979,6 @@
                     </div>
                 `;
                 
-                // 🔥 Inline onclick на весь элемент
                 item.onclick = function() {
                     openModal(show.id);
                 };
@@ -1044,7 +1043,6 @@
             document.getElementById('modalAge').innerText = show.age || '—';
             document.getElementById('modalCountry').innerText = show.country || '—';
             
-            document.getElementById('modalRatingDisplay').innerText = displayRating ? displayRating.toFixed(1) : '--';
             document.getElementById('impressionsInput').value = show.impressions || '';
             
             document.getElementById('ratingInputContainer').classList.add('hidden');
@@ -1085,8 +1083,11 @@
                 state.shows[showIndex].rating = val;
                 saveUserData();
                 const displayRating = state.shows[showIndex].imdbRating || val;
-                document.getElementById('modalRatingDisplay').innerText = displayRating.toFixed(1);
+                document.getElementById('modalRating').innerText = displayRating.toFixed(1);
                 document.getElementById('ratingInputContainer').classList.add('hidden');
+                
+                // Обновляем список, чтобы рейтинг отобразился в карточке
+                renderShowList();
                 
                 if(window.Telegram && window.Telegram.WebApp.HapticFeedback) {
                     window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
