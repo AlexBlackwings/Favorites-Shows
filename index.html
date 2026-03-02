@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Все стили без изменений (см. предыдущие версии) */
+        /* Все стили без изменений (такие же, как в предыдущих версиях) */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #0f0f0f;
@@ -16,14 +16,18 @@
             overflow-x: hidden;
             -webkit-tap-highlight-color: transparent;
         }
+
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+
         .slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes slideUp {
             from { transform: translateY(100%); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
+
         .modal-backdrop { background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px); }
+
         .glass-input {
             background: rgba(255, 255, 255, 0.08);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -34,6 +38,7 @@
             border-color: #3b82f6;
             background: rgba(255, 255, 255, 0.12);
         }
+
         .loader {
             border: 3px solid rgba(255,255,255,0.1);
             border-left-color: #3b82f6;
@@ -43,6 +48,7 @@
             animation: spin 1s linear infinite;
         }
         @keyframes spin { 100% { transform: rotate(360deg); } }
+
         .delete-btn {
             transition: transform 0.2s, background-color 0.2s;
             cursor: pointer;
@@ -68,6 +74,7 @@
             transform: scale(0.95);
             background-color: rgba(220, 38, 38, 0.3);
         }
+
         .poster-container {
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
             position: relative;
@@ -80,6 +87,7 @@
             align-items: center;
             justify-content: center;
         }
+
         .poster-img {
             transition: opacity 0.3s ease;
             width: 100%;
@@ -89,6 +97,7 @@
         }
         .poster-img.loading { opacity: 0.5; }
         .poster-img.loaded { opacity: 1; }
+
         .poster-placeholder {
             position: absolute;
             top: 0;
@@ -111,6 +120,7 @@
             height: 40px;
             opacity: 0.5;
         }
+
         .rating-badge {
             min-width: 44px;
             padding: 4px 8px;
@@ -126,6 +136,7 @@
         .rating-med { background: rgba(234, 179, 8, 0.2); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.3); }
         .rating-low { background: rgba(107, 114, 128, 0.2); color: #9ca3af; border: 1px solid rgba(107, 114, 128, 0.3); }
         .rating-none { background: rgba(255, 255, 255, 0.05); color: #6b7280; border: 1px solid rgba(255, 255, 255, 0.1); }
+
         .list-item {
             margin-bottom: 12px;
             transition: all 0.3s ease;
@@ -142,10 +153,12 @@
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
+
         #showList {
             list-style: none;
             padding-left: 0;
         }
+
         .show-card {
             display: flex;
             flex-direction: row;
@@ -161,6 +174,7 @@
         .show-card:hover {
             background: rgba(255, 255, 255, 0.05);
         }
+
         .show-card-content {
             flex: 1;
             min-width: 0;
@@ -169,6 +183,7 @@
             justify-content: flex-start;
             padding-top: 4px;
         }
+
         .show-card-right {
             display: flex;
             flex-direction: column;
@@ -177,6 +192,7 @@
             flex-shrink: 0;
             min-width: 44px;
         }
+
         .show-card-number {
             font-size: 14px;
             font-weight: 600;
@@ -184,12 +200,14 @@
             line-height: 1.3;
             white-space: nowrap;
         }
+
         .show-card-actions {
             display: flex;
             flex-direction: row;
             gap: 8px;
             align-items: center;
         }
+
         .meta-row {
             display: flex;
             flex-wrap: wrap;
@@ -197,6 +215,7 @@
             margin-top: 6px;
             align-items: center;
         }
+
         .meta-tag {
             font-size: 10px;
             color: #9ca3af;
@@ -214,6 +233,7 @@
             opacity: 0.7;
             flex-shrink: 0;
         }
+
         .genre-tag {
             font-size: 10px;
             color: #60a5fa;
@@ -222,6 +242,7 @@
             border-radius: 4px;
             border: 1px solid rgba(59, 130, 246, 0.3);
         }
+
         .status-badge {
             font-size: 10px;
             padding: 2px 6px;
@@ -232,12 +253,14 @@
         }
         .status-running { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
         .status-ended { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+
         .original-title {
             font-size: 11px;
             color: #6b7280;
             font-weight: 400;
             margin-top: 2px;
         }
+
         .show-title {
             font-size: 14px;
             font-weight: 600;
@@ -246,6 +269,7 @@
             margin-bottom: 4px;
             word-break: break-word;
         }
+
         .platform-tag {
             font-size: 10px;
             color: #fbbf24;
@@ -253,6 +277,7 @@
             padding: 2px 6px;
             border-radius: 4px;
         }
+
         #searchResults.hidden {
             display: none !important;
         }
@@ -424,8 +449,9 @@
 
             let state = {
                 userId: null,
-                shows: [],
-                impressions: {},          // отдельное хранилище для впечатлений { showId: текст }
+                shows: [],          // основная информация (без summary, actors, impressions)
+                details: {},         // детали по id: { summary, actors }
+                impressions: {},     // впечатления по id
                 currentModalShowId: null,
                 dataLoaded: false
             };
@@ -566,24 +592,27 @@
                 document.getElementById('clearAllBtn').addEventListener('click', clearAllData);
             });
 
-            // ---- Данные пользователя (Telegram CloudStorage) с разделением ----
+            // ---- Данные пользователя (три ключа: shows, details, impressions) ----
             function loadUserData(callback) {
                 const showsKey = `tma_shows_${state.userId}`;
+                const detailsKey = `tma_details_${state.userId}`;
                 const impressionsKey = `tma_impressions_${state.userId}`;
                 
                 if (window.Telegram?.WebApp?.CloudStorage) {
                     Promise.all([
-                        new Promise(resolve => {
-                            Telegram.WebApp.CloudStorage.getItem(showsKey, (err, val) => resolve(val));
-                        }),
-                        new Promise(resolve => {
-                            Telegram.WebApp.CloudStorage.getItem(impressionsKey, (err, val) => resolve(val));
-                        })
-                    ]).then(([showsVal, impressionsVal]) => {
+                        new Promise(resolve => Telegram.WebApp.CloudStorage.getItem(showsKey, (err, val) => resolve(val))),
+                        new Promise(resolve => Telegram.WebApp.CloudStorage.getItem(detailsKey, (err, val) => resolve(val))),
+                        new Promise(resolve => Telegram.WebApp.CloudStorage.getItem(impressionsKey, (err, val) => resolve(val)))
+                    ]).then(([showsVal, detailsVal, impressionsVal]) => {
                         try {
                             state.shows = showsVal ? JSON.parse(showsVal) : [];
                         } catch {
                             state.shows = [];
+                        }
+                        try {
+                            state.details = detailsVal ? JSON.parse(detailsVal) : {};
+                        } catch {
+                            state.details = {};
                         }
                         try {
                             state.impressions = impressionsVal ? JSON.parse(impressionsVal) : {};
@@ -596,9 +625,11 @@
                 } else {
                     try {
                         state.shows = JSON.parse(localStorage.getItem(showsKey) || '[]');
+                        state.details = JSON.parse(localStorage.getItem(detailsKey) || '{}');
                         state.impressions = JSON.parse(localStorage.getItem(impressionsKey) || '{}');
                     } catch {
                         state.shows = [];
+                        state.details = {};
                         state.impressions = {};
                     }
                     state.dataLoaded = true;
@@ -608,24 +639,31 @@
 
             function saveUserData() {
                 const showsKey = `tma_shows_${state.userId}`;
+                const detailsKey = `tma_details_${state.userId}`;
                 const impressionsKey = `tma_impressions_${state.userId}`;
                 
-                // Сохраняем только основную информацию (без summary, actors, impressions)
+                // Основная информация (без summary, actors, impressions)
                 const showsData = JSON.stringify(state.shows.map(show => {
-                    const { summary, actors, impressions, ...rest } = show; // удаляем длинные поля
+                    const { summary, actors, ...rest } = show;
                     return rest;
                 }));
+                
+                const detailsData = JSON.stringify(state.details);
                 const impressionsData = JSON.stringify(state.impressions);
                 
                 if (window.Telegram?.WebApp?.CloudStorage) {
                     Telegram.WebApp.CloudStorage.setItem(showsKey, showsData, (err) => {
                         if (err) console.warn('CloudStorage shows save error:', err);
                     });
+                    Telegram.WebApp.CloudStorage.setItem(detailsKey, detailsData, (err) => {
+                        if (err) console.warn('CloudStorage details save error:', err);
+                    });
                     Telegram.WebApp.CloudStorage.setItem(impressionsKey, impressionsData, (err) => {
                         if (err) console.warn('CloudStorage impressions save error:', err);
                     });
                 } else {
                     localStorage.setItem(showsKey, showsData);
+                    localStorage.setItem(detailsKey, detailsData);
                     localStorage.setItem(impressionsKey, impressionsData);
                 }
                 renderShowList();
@@ -635,6 +673,7 @@
             function clearAllData() {
                 if (confirm('Удалить весь список сериалов?')) {
                     state.shows = [];
+                    state.details = {};
                     state.impressions = {};
                     saveUserData();
                     window.Telegram?.WebApp.HapticFeedback?.notificationOccurred('warning');
@@ -965,7 +1004,6 @@
                     
                     const genresArray = genres ? genres.split(',').map(g => g.trim()) : [];
                     
-                    // Создаём объект сериала без длинных полей и без impressions
                     const newShow = {
                         id: id,
                         title: title,
@@ -979,7 +1017,7 @@
                         network: network || '',
                         status: status || '',
                         runtime: runtime ? parseInt(runtime) : 0,
-                        summary: summary || '',       // оставляем, но можно и убрать, если нужно экономить место
+                        summary: summary || '',
                         actors: (details && details.actors) ? details.actors : (actors || ''),
                         country: country || '',
                         age: (details && details.ageRating) ? details.ageRating : (age || ''),
@@ -988,7 +1026,13 @@
                     };
                     
                     state.shows.push(newShow);
-                    // Если impressions для этого id ещё нет, можно не создавать пустую запись
+                    
+                    // Сохраняем детали отдельно
+                    state.details[id] = {
+                        summary: newShow.summary,
+                        actors: newShow.actors
+                    };
+                    
                     saveUserData();
                     
                     document.getElementById('searchInput').value = '';
@@ -1010,11 +1054,13 @@
                         item.classList.add('removing');
                         setTimeout(() => {
                             state.shows = state.shows.filter(s => s.id !== id);
+                            delete state.details[id];
                             delete state.impressions[id];
                             saveUserData();
                         }, 300);
                     } else {
                         state.shows = state.shows.filter(s => s.id !== id);
+                        delete state.details[id];
                         delete state.impressions[id];
                         saveUserData();
                     }
@@ -1038,7 +1084,7 @@
                 return '';
             }
 
-            // ---- Рендеринг списка (без изменений) ----
+            // ---- Рендеринг списка ----
             function renderShowList() {
                 const container = document.getElementById('showList');
                 const emptyState = document.getElementById('emptyState');
@@ -1171,22 +1217,15 @@
                 });
             }
 
-            // ---- Модальное окно (с impressions из отдельного хранилища) ----
+            // ---- Модальное окно (с объединёнными данными из shows + details) ----
             async function openModal(id) {
                 const show = state.shows.find(s => s.id === id);
                 if (!show) return;
                 state.currentModalShowId = id;
 
-                if (!show.actors || show.actors === '') {
-                    const details = await fetchShowDetails(id);
-                    if (details) {
-                        show.actors = details.actors;
-                        if (details.imdbRating) show.imdbRating = details.imdbRating;
-                        if (details.ageRating) show.age = details.ageRating;
-                        if (details.totalSeasons) show.totalSeasons = details.totalSeasons;
-                    }
-                }
-
+                // Подтягиваем детали из state.details
+                const details = state.details[id] || {};
+                
                 const posterImg = document.getElementById('modalPoster');
                 const placeholder = posterImg.parentElement.querySelector('.poster-placeholder');
                 posterImg.style.display = 'block';
@@ -1224,10 +1263,9 @@
                     genresContainer.innerHTML = '<span class="text-sm text-gray-500">—</span>';
                 }
 
-                document.getElementById('modalSummary').innerText = show.summary || 'Описание отсутствует';
-                document.getElementById('modalActors').innerText = show.actors || 'Информация недоступна';
+                document.getElementById('modalSummary').innerText = details.summary || show.summary || 'Описание отсутствует';
+                document.getElementById('modalActors').innerText = details.actors || show.actors || 'Информация недоступна';
                 
-                // Впечатления берём из отдельного хранилища
                 document.getElementById('impressionsInput').value = state.impressions[show.id] || '';
 
                 document.getElementById('ratingInputContainer').classList.add('hidden');
@@ -1271,16 +1309,7 @@
                 const text = document.getElementById('impressionsInput').value;
                 if (state.currentModalShowId) {
                     state.impressions[state.currentModalShowId] = text;
-                    // Сохраняем только impressions (отдельно)
-                    const impressionsKey = `tma_impressions_${state.userId}`;
-                    const impressionsData = JSON.stringify(state.impressions);
-                    if (window.Telegram?.WebApp?.CloudStorage) {
-                        Telegram.WebApp.CloudStorage.setItem(impressionsKey, impressionsData, (err) => {
-                            if (err) console.warn('CloudStorage impressions save error:', err);
-                        });
-                    } else {
-                        localStorage.setItem(impressionsKey, impressionsData);
-                    }
+                    saveUserData(); // теперь impressions сохраняются через общую функцию
                     window.Telegram?.WebApp.HapticFeedback?.notificationOccurred('success');
                 }
             }
