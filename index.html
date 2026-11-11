@@ -679,14 +679,20 @@
             const API_BASE_URL = window.location.origin; 
 
 async function loadUserData() {
-    if (!state.userId) return;
+    if (!state.userId) {
+        alert('ОШИБКА: state.userId пустой!');
+        return;
+    }
+    
+    const fetchUrl = `${API_BASE_URL}/api/shows/${state.userId}`;
+    
     try {
-        const response = await fetch(`${API_BASE_URL}/api/shows/${state.userId}`);
+        const response = await fetch(fetchUrl);
         if (response.ok) {
             const data = await response.json();
             
-            // ВРЕМЕННАЯ ОТЛАДКА (покажет, что видит телефон)
-            alert('ID: ' + state.userId + '\nТип: ' + (Array.isArray(data) ? 'Массив' : 'Объект') + '\nЧто пришло: ' + JSON.stringify(data).substring(0, 100));
+            // ВРЕМЕННАЯ ОТЛАДКА
+            alert('ID: ' + state.userId + '\nURL: ' + fetchUrl + '\nПришло: ' + JSON.stringify(data).substring(0, 50));
             
             if (Array.isArray(data)) {
                 state.shows = data;
@@ -698,12 +704,11 @@ async function loadUserData() {
                 state.impressions = data.impressions || {};
             }
         } else {
-            alert('Ошибка сервера: ' + response.status);
+            alert('Ошибка сервера: ' + response.status + '\nURL: ' + fetchUrl);
             state.shows = [];
         }
     } catch (error) {
         alert('Ошибка сети: ' + error.message);
-        console.error('Failed to load data from server:', error);
         state.shows = [];
     }
     state.dataLoaded = true;
