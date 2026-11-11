@@ -284,15 +284,26 @@
 </head>
 <body class="h-screen flex flex-col">
 
+    <!-- Баннер режима просмотра -->
+    <div id="readOnlyBanner" class="hidden bg-blue-600 text-white text-center py-2 text-xs font-semibold px-4 shadow-md z-50">
+        Вы просматриваете список друга. <a href="/" class="underline ml-1">Вернуться к своему</a>
+    </div>
+
     <header class="p-4 sticky top-0 z-20 bg-[#0f0f0f]/95 backdrop-blur-md border-b border-white/5 shadow-lg">
         <div class="flex items-center justify-between">
             <h1 class="text-lg font-bold tracking-tight text-white" id="dynamicTitle">Мой рейтинг из 0 сериалов</h1>
-            <button id="clearAllBtn" class="text-xs text-gray-500 hover:text-red-400 transition-colors">
-                Сброс
-            </button>
+            <div class="flex gap-3 items-center">
+                <button id="shareBtn" class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg transition-colors hidden sm:block">
+                    Поделиться
+                </button>
+                <button id="clearAllBtn" class="text-xs text-gray-500 hover:text-red-400 transition-colors">
+                    Сброс
+                </button>
+            </div>
         </div>
         
-        <div class="relative mt-3">
+        <!-- Поиск (скрывается в режиме просмотра) -->
+        <div class="relative mt-3" id="searchContainer">
             <input type="text" id="searchInput" placeholder="Поиск (Ведьмак, Mandalorian...)..." 
                 class="w-full glass-input rounded-xl pl-4 pr-10 py-3 text-sm placeholder-gray-500 transition-all shadow-inner">
             
@@ -311,7 +322,7 @@
             <div class="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
                 <svg class="w-8 h-8 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
             </div>
-            <p class="text-sm">Ваш список пуст.<br>Введите название сериала в поиск сверху.</p>
+            <p class="text-sm" id="emptyStateText">Ваш список пуст.<br>Введите название сериала в поиск сверху.</p>
         </div>
 
         <div id="showList" class="px-4 py-4">
@@ -351,7 +362,7 @@
                         <span id="modalSeasons" class="text-xs text-gray-400">📀 5 сезонов</span>
                     </div>
 
-                    <button onclick="enableEditRating()" class="text-xs text-gray-400 hover:text-white underline decoration-gray-600 underline-offset-2 w-fit">Оценить</button>
+                    <button id="editRatingBtn" onclick="enableEditRating()" class="text-xs text-gray-400 hover:text-white underline decoration-gray-600 underline-offset-2 w-fit">Оценить</button>
                 </div>
             </div>
 
@@ -373,7 +384,7 @@
                 <p id="modalActors" class="text-sm text-gray-300"></p>
             </div>
 
-            <!-- Поле оценки с шагом 0.01 -->
+            <!-- Поле оценки (скрывается в режиме просмотра) -->
             <div id="ratingInputContainer" class="mb-6 hidden bg-white/5 p-4 rounded-xl border border-white/5">
                 <label class="block text-xs text-gray-400 mb-2 font-medium">Ваша оценка</label>
                 <div class="flex gap-2">
@@ -382,14 +393,15 @@
                 </div>
             </div>
 
-            <!-- Впечатления -->
+            <!-- Впечатления (В режиме просмотра это просто текст) -->
             <div class="mb-24 sm:mb-6">
-                <label class="block text-sm font-medium text-gray-300 mb-2">Ваши впечатления</label>
-                <textarea id="impressionsInput" rows="6" class="w-full glass-input rounded-xl p-4 text-sm resize-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="Напишите рецензию..."></textarea>
+                <label class="block text-sm font-medium text-gray-300 mb-2">Впечатления</label>
+                <textarea id="impressionsInput" rows="6" class="w-full glass-input rounded-xl p-4 text-sm resize-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="Рецензия отсутствует..."></textarea>
+                <p id="impressionsDisplay" class="text-sm text-gray-300 mt-1 hidden"></p>
             </div>
 
             <div class="flex gap-3 mt-6">
-                <button onclick="saveImpressions()" class="flex-1 bg-white text-black py-3.5 rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors">
+                <button id="saveImpressionsBtn" onclick="saveImpressions()" class="flex-1 bg-white text-black py-3.5 rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors">
                     Сохранить
                 </button>
                 <button onclick="closeModal()" class="flex-1 bg-gray-800 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-gray-700 transition-colors">
@@ -447,11 +459,13 @@
 
             let state = {
                 userId: null,
+                viewerId: null,
                 shows: [],
                 details: {},
                 impressions: {},
                 currentModalShowId: null,
-                dataLoaded: false
+                dataLoaded: false,
+                isReadOnly: false
             };
 
             function getSeriesWord(count) {
@@ -460,7 +474,12 @@
             }
 
             function updateHeaderTitle() {
-                document.getElementById('dynamicTitle').textContent = `Мой рейтинг из ${state.shows.length} ${getSeriesWord(state.shows.length)}`;
+                const prefix = state.isReadOnly ? 'Рейтинг друга:' : 'Мой рейтинг из';
+                if (state.isReadOnly) {
+                    document.getElementById('dynamicTitle').textContent = `Рейтинг друга (${state.shows.length})`;
+                } else {
+                    document.getElementById('dynamicTitle').textContent = `Мой рейтинг из ${state.shows.length} ${getSeriesWord(state.shows.length)}`;
+                }
             }
 
             // ---- Работа с кешем изображений ----
@@ -573,7 +592,24 @@
             document.addEventListener('DOMContentLoaded', async () => {
                 cleanImageCache();
                 
-                // Надежное определение ID пользователя
+                // 1. Определяем, чей ID мы смотрим
+                let sharedId = null;
+                
+                // Проверяем параметр startapp (Telegram)
+                if (window.Telegram?.WebApp?.initDataUnsafe?.start_param) {
+                    let startParam = window.Telegram.WebApp.initDataUnsafe.start_param;
+                    if (startParam.startsWith('view_')) {
+                        sharedId = startParam.replace('view_', '');
+                    }
+                }
+                
+                // Проверяем URL параметр (обычный браузер)
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.has('view_user')) {
+                    sharedId = urlParams.get('view_user');
+                }
+
+                // 2. Определяем ID зрителя (того, кто открыл приложение)
                 let tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
                 if (window.Telegram?.WebApp) {
                     window.Telegram.WebApp.ready();
@@ -581,20 +617,45 @@
                 }
                 
                 if (tgUser && tgUser.id) {
-                    state.userId = 'tg_' + tgUser.id;
+                    state.viewerId = 'tg_' + tgUser.id;
                 } else {
                     let storedId = localStorage.getItem('tma_user_id');
                     if (!storedId) {
                         storedId = 'web_' + Math.random().toString(36).substr(2, 9);
                         localStorage.setItem('tma_user_id', storedId);
                     }
-                    state.userId = storedId;
+                    state.viewerId = storedId;
                 }
-                console.log('Текущий User ID:', state.userId);
+
+                // 3. Включаем режим "Только чтение", если перешли по ссылке друга
+                if (sharedId) {
+                    state.userId = sharedId;
+                    state.isReadOnly = true;
+                    
+                    // Скрываем интерфейс редактирования
+                    document.getElementById('readOnlyBanner').classList.remove('hidden');
+                    document.getElementById('searchContainer').style.display = 'none';
+                    document.getElementById('clearAllBtn').style.display = 'none';
+                    document.getElementById('shareBtn').style.display = 'none';
+                    document.getElementById('emptyStateText').innerHTML = 'Список этого пользователя пока пуст.';
+                } else {
+                    state.userId = state.viewerId;
+                    state.isReadOnly = false;
+                    
+                    // Показываем кнопку "Поделиться"
+                    const shareBtn = document.getElementById('shareBtn');
+                    shareBtn.classList.remove('hidden');
+                    shareBtn.addEventListener('click', shareList);
+                }
+                
+                console.log('Текущий User ID:', state.userId, 'ReadOnly:', state.isReadOnly);
 
                 await loadUserData();
-                setupSearch();
-                document.getElementById('clearAllBtn').addEventListener('click', clearAllData);
+                
+                if (!state.isReadOnly) {
+                    setupSearch();
+                    document.getElementById('clearAllBtn').addEventListener('click', clearAllData);
+                }
             });
 
             // ---- Работа с API Сервера (SQLite) ----
@@ -615,8 +676,6 @@
                             state.details = data.details || {};
                             state.impressions = data.impressions || {};
                         }
-                    } else {
-                        console.error('Server returned error:', response.status);
                     }
                 } catch (error) {
                     console.error('Failed to load data from server:', error);
@@ -627,7 +686,7 @@
             }
 
             async function saveUserData() {
-                if (!state.userId) return;
+                if (!state.userId || state.isReadOnly) return; // Блокируем сохранение в режиме чтения
                 const payload = {
                     shows: state.shows,
                     details: state.details,
@@ -649,12 +708,30 @@
             }
 
             async function clearAllData() {
+                if (state.isReadOnly) return;
                 if (confirm('Удалить весь список сериалов?')) {
                     state.shows = [];
                     state.details = {};
                     state.impressions = {};
                     await saveUserData();
                     window.Telegram?.WebApp.HapticFeedback?.notificationOccurred('warning');
+                }
+            }
+
+            // ---- Функция "Поделиться" ----
+            function shareList() {
+                // ВАЖНО: Замените YOUR_BOT_USERNAME на юзернейм вашего бота!
+                const botUsername = "favshows_bot"; 
+                
+                // Генерируем ссылку с параметром startapp
+                const shareUrl = `https://t.me/${botUsername}?startapp=view_${state.userId}`;
+                const text = "Посмотри мой рейтинг сериалов!";
+                
+                if (window.Telegram?.WebApp) {
+                    window.Telegram.WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(text)}`);
+                } else {
+                    navigator.clipboard.writeText(shareUrl);
+                    alert('Ссылка на ваш список скопирована!');
                 }
             }
 
@@ -984,6 +1061,7 @@
             }
 
             async function addShowFromApi(id, title, originalTitle, posterUrl, year, endYear, episodes, genres, network, status, runtime, summary, actors, rating, country, age) {
+                if (state.isReadOnly) return; // Запрет на изменение
                 if (!state.shows.find(s => s.id === id)) {
                     const details = await fetchShowDetails(id);
                     
@@ -1031,6 +1109,7 @@
             async function removeShow(event, id) {
                 event.preventDefault();
                 event.stopPropagation();
+                if (state.isReadOnly) return; // Запрет на удаление
                 
                 if(confirm('Удалить этот сериал из списка?')) {
                     const item = document.querySelector(`[data-show-id="${id}"]`);
@@ -1179,12 +1258,18 @@
                     const ratingDiv = document.createElement('div');
                     ratingDiv.className = `rating-badge ${ratingClass}`;
                     ratingDiv.textContent = ratingDisplay;
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.className = 'delete-btn';
-                    deleteBtn.textContent = '✕';
-                    deleteBtn.addEventListener('click', (e) => removeShow(e, show.id));
+                    
                     actionsDiv.appendChild(ratingDiv);
-                    actionsDiv.appendChild(deleteBtn);
+                    
+                    // Показываем кнопку удаления только владельцу списка
+                    if (!state.isReadOnly) {
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.className = 'delete-btn';
+                        deleteBtn.textContent = '✕';
+                        deleteBtn.addEventListener('click', (e) => removeShow(e, show.id));
+                        actionsDiv.appendChild(deleteBtn);
+                    }
+                    
                     rightDiv.appendChild(numberDiv);
                     rightDiv.appendChild(actionsDiv);
 
@@ -1244,7 +1329,24 @@
                 document.getElementById('modalSummary').innerText = details.summary || show.summary || 'Описание отсутствует';
                 document.getElementById('modalActors').innerText = details.actors || show.actors || 'Информация недоступна';
                 
-                document.getElementById('impressionsInput').value = state.impressions[show.id] || '';
+                // Режим просмотра рецензии vs редактирования
+                const impressionsText = state.impressions[show.id] || '';
+                
+                if (state.isReadOnly) {
+                    document.getElementById('impressionsInput').classList.add('hidden');
+                    document.getElementById('saveImpressionsBtn').classList.add('hidden');
+                    document.getElementById('editRatingBtn').classList.add('hidden');
+                    
+                    const disp = document.getElementById('impressionsDisplay');
+                    disp.classList.remove('hidden');
+                    disp.innerText = impressionsText || 'Рецензия отсутствует';
+                } else {
+                    document.getElementById('impressionsInput').classList.remove('hidden');
+                    document.getElementById('saveImpressionsBtn').classList.remove('hidden');
+                    document.getElementById('editRatingBtn').classList.remove('hidden');
+                    document.getElementById('impressionsDisplay').classList.add('hidden');
+                    document.getElementById('impressionsInput').value = impressionsText;
+                }
 
                 document.getElementById('ratingInputContainer').classList.add('hidden');
                 document.getElementById('detailModal').classList.remove('hidden');
@@ -1257,6 +1359,7 @@
             }
 
             function enableEditRating() {
+                if (state.isReadOnly) return;
                 const container = document.getElementById('ratingInputContainer');
                 const input = document.getElementById('ratingInput');
                 const show = state.shows.find(s => s.id === state.currentModalShowId);
@@ -1266,6 +1369,7 @@
             }
 
             async function saveRating() {
+                if (state.isReadOnly) return;
                 const input = document.getElementById('ratingInput');
                 let val = parseFloat(input.value);
                 if (isNaN(val)) val = 0;
@@ -1284,6 +1388,7 @@
             }
 
             async function saveImpressions() {
+                if (state.isReadOnly) return;
                 const text = document.getElementById('impressionsInput').value;
                 if (state.currentModalShowId) {
                     state.impressions[state.currentModalShowId] = text;
@@ -1292,14 +1397,11 @@
                 }
             }
 
-            function shareProfile() { console.warn('shareProfile called but removed'); }
-
             window.openModal = openModal;
             window.closeModal = closeModal;
             window.enableEditRating = enableEditRating;
             window.saveRating = saveRating;
             window.saveImpressions = saveImpressions;
-            window.shareProfile = shareProfile;
             window.removeShow = removeShow;
             window.addShowFromApi = addShowFromApi;
             window.clearAllData = clearAllData;
