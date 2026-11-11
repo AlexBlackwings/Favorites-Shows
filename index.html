@@ -620,7 +620,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     console.log('Полученный start_param:', startParam);
-    alert('startParam = ' + startParam); // временная строка
+    // ВРЕМЕННАЯ ОТЛАДКА
+    let debugInfo = "startParam: " + startParam + "\n\n";
+    debugInfo += "URL: " + window.location.href + "\n\n";
+    
+    if (window.Telegram?.WebApp) {
+        debugInfo += "start_param (API): " + window.Telegram.WebApp.initDataUnsafe?.start_param + "\n";
+        debugInfo += "initDataUnsafe: " + JSON.stringify(window.Telegram.WebApp.initDataUnsafe) + "\n";
+    } else {
+        debugInfo += "Telegram WebApp НЕ ОБНАРУЖЕН\n";
+    }
+    alert(debugInfo);
+    // КОНЕЦ ОТЛАДКИ
 
     // 3. Определяем, чей список мы смотрим
     let sharedId = null;
