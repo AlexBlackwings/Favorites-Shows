@@ -285,9 +285,9 @@
 <body class="h-screen flex flex-col">
 
     <!-- Баннер режима просмотра -->
-    <div id="readOnlyBanner" class="hidden bg-blue-600 text-white text-center py-2 text-xs font-semibold px-4 shadow-md z-50">
-        Вы просматриваете список друга. <a href="/" class="underline ml-1">Вернуться к своему</a>
-    </div>
+<div id="readOnlyBanner" class="hidden bg-blue-600 text-white text-center py-2 text-xs font-semibold px-4 shadow-md z-50">
+    Вы просматриваете список друга. <span onclick="goToOwnList()" class="underline ml-1 cursor-pointer">Вернуться к своему</span>
+</div>
 
     <header class="p-4 sticky top-0 z-20 bg-[#0f0f0f]/95 backdrop-blur-md border-b border-white/5 shadow-lg">
         <div class="flex items-center justify-between">
@@ -678,29 +678,36 @@ document.addEventListener('DOMContentLoaded', async () => {
             // ---- Работа с API Сервера (SQLite) ----
             const API_BASE_URL = window.location.origin; 
 
-            async function loadUserData() {
-                if (!state.userId) return;
-                try {
-                    const response = await fetch(`${API_BASE_URL}/api/shows/${state.userId}`);
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (Array.isArray(data)) {
-                            state.shows = data;
-                            state.details = {};
-                            state.impressions = {};
-                        } else {
-                            state.shows = data.shows || [];
-                            state.details = data.details || {};
-                            state.impressions = data.impressions || {};
-                        }
-                    }
-                } catch (error) {
-                    console.error('Failed to load data from server:', error);
-                }
-                state.dataLoaded = true;
-                renderShowList();
-                updateHeaderTitle();
+async function loadUserData() {
+    if (!state.userId) return;
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/shows/${state.userId}`);
+        if (response.ok) {
+            const data = await response.json();
+            
+            // ВРЕМЕННАЯ ОТЛАДКА: Покажет первые 150 символов того, что пришло с сервера
+            alert('Для ID: ' + state.userId + '\nПришло с сервера: ' + JSON.stringify(data).substring(0, 150) + '...');
+            
+            if (Array.isArray(data)) {
+                state.shows = data;
+                state.details = {};
+                state.impressions = {};
+            } else {
+                state.shows = data.shows || [];
+                state.details = data.details || {};
+                state.impressions = data.impressions || {};
             }
+        } else {
+            alert('Ошибка сервера: ' + response.status);
+        }
+    } catch (error) {
+        alert('Ошибка сети: ' + error.message);
+        console.error('Failed to load data from server:', error);
+    }
+    state.dataLoaded = true;
+    renderShowList();
+    updateHeaderTitle();
+}
 
             async function saveUserData() {
                 if (!state.userId || state.isReadOnly) return; // Блокируем сохранение в режиме чтения
@@ -1416,6 +1423,13 @@ function shareList() {
                 }
             }
 
+            function goToOwnList() {
+    // Принудительно перезагружаем страницу по текущему адресу, убирая параметры
+    window.location.href = window.location.origin + window.location.pathname;
+}
+// Не забудьте добавить её в экспорт:
+window.goToOwnList = goToOwnList;
+            
             window.openModal = openModal;
             window.closeModal = closeModal;
             window.enableEditRating = enableEditRating;
