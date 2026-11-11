@@ -589,74 +589,91 @@
             }
 
             // ---- Инициализация ----
-            document.addEventListener('DOMContentLoaded', async () => {
-                cleanImageCache();
-                
-                // 1. Определяем, чей ID мы смотрим
-                let sharedId = null;
-                
-                // Проверяем параметр startapp (Telegram)
-                if (window.Telegram?.WebApp?.initDataUnsafe?.start_param) {
-                    let startParam = window.Telegram.WebApp.initDataUnsafe.start_param;
-                    if (startParam.startsWith('view_')) {
-                        sharedId = startParam.replace('view_', '');
-                    }
-                }
-                
-                // Проверяем URL параметр (обычный браузер)
-                const urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.has('view_user')) {
-                    sharedId = urlParams.get('view_user');
-                }
+document.addEventListener('DOMContentLoaded', async () => {
+    cleanImageCache();
+    
+    // 1. Инициализация Telegram WebApp
+    if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.ready();
+        window.Telegram.WebApp.expand();
+    }
 
-                // 2. Определяем ID зрителя (того, кто открыл приложение)
-                let tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-                if (window.Telegram?.WebApp) {
-                    window.Telegram.WebApp.ready();
-                    window.Telegram.WebApp.expand();
-                }
-                
-                if (tgUser && tgUser.id) {
-                    state.viewerId = 'tg_' + tgUser.id;
-                } else {
-                    let storedId = localStorage.getItem('tma_user_id');
-                    if (!storedId) {
-                        storedId = 'web_' + Math.random().toString(36).substr(2, 9);
-                        localStorage.setItem('tma_user_id', storedId);
-                    }
-                    state.viewerId = storedId;
-                }
+    // 2. Пытаемся получить start_param из ВСЕХ возможных источников
+    let startParam = null;
+    const tgWebApp = window.Telegram?.WebApp;
+    
+    if (tgWebApp) {
+        // Источник 1: initDataUnsafe.start_param (основной)
+        if (tgWebApp.initDataUnsafe?.start_param) {
+            startParam = tgWebApp.initDataUnsafe.start_param;
+        } 
+        // Источник 2: свойство startParam (на случай задержки в iOS)
+        else if (tgWebApp.startParam) {
+            startParam = tgWebApp.startParam;
+        }
+    }
 
-                // 3. Включаем режим "Только чтение", если перешли по ссылке друга
-                if (sharedId) {
-                    state.userId = sharedId;
-                    state.isReadOnly = true;
-                    
-                    // Скрываем интерфейс редактирования
-                    document.getElementById('readOnlyBanner').classList.remove('hidden');
-                    document.getElementById('searchContainer').style.display = 'none';
-                    document.getElementById('clearAllBtn').style.display = 'none';
-                    document.getElementById('shareBtn').style.display = 'none';
-                    document.getElementById('emptyStateText').innerHTML = 'Список этого пользователя пока пуст.';
-                } else {
-                    state.userId = state.viewerId;
-                    state.isReadOnly = false;
-                    
-                    // Показываем кнопку "Поделиться"
-                    const shareBtn = document.getElementById('shareBtn');
-                    shareBtn.classList.remove('hidden');
-                    shareBtn.addEventListener('click', shareList);
-                }
-                
-                console.log('Текущий User ID:', state.userId, 'ReadOnly:', state.isReadOnly);
+    // Источник 3: Разбор URL (tgWebAppStartParam)
+    if (!startParam) {
+        const urlParams = new URLSearchParams(window.location.search);
+        startParam = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp');
+    }
 
-                await loadUserData();
-                
-                if (!state.isReadOnly) {
-                    setupSearch();
-                    document.getElementById('clearAllBtn').addEventListener('click', clearAllData);
-                }
-            });
+    console.log('Полученный start_param:', startParam);
+
+    // 3. Определяем, чей список мы смотрим
+    let sharedId = null;
+    if (startParam && startParam.startsWith('view_')) {
+        sharedId = startParam.replace('view_', '');
+    }
+    
+    // Дополнительная проверка через обычные URL параметры (если открыто в браузере)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (!sharedId && urlParams.has('view_user')) {
+        sharedId = urlParams.get('view_user');
+    }
+
+    // 4. Определяем ID зрителя (того, кто открыл приложение)
+    let tgUser = tgWebApp?.initDataUnsafe?.user;
+    if (tgUser && tgUser.id) {
+        state.viewerId = 'tg_' + tgUser.id;
+    } else {
+        let storedId = localStorage.getItem('tma_user_id');
+        if (!storedId) {
+            storedId = 'web_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('tma_user_id', storedId);
+        }
+        state.viewerId = storedId;
+    }
+
+    // 5. Включаем режим "Только чтение"
+    if (sharedId) {
+        state.userId = sharedId;
+        state.isReadOnly = true;
+        
+        document.getElementById('readOnlyBanner').classList.remove('hidden');
+        document.getElementById('searchContainer').style.display = 'none';
+        document.getElementById('clearAllBtn').style.display = 'none';
+        document.getElementById('shareBtn').style.display = 'none';
+        document.getElementById('emptyStateText').innerHTML = 'Список этого пользователя пока пуст.';
+    } else {
+        state.userId = state.viewerId;
+        state.isReadOnly = false;
+        
+        const shareBtn = document.getElementById('shareBtn');
+        shareBtn.classList.remove('hidden');
+        shareBtn.addEventListener('click', shareList);
+    }
+    
+    console.log('Текущий User ID:', state.userId, 'ReadOnly:', state.isReadOnly);
+
+    await loadUserData();
+    
+    if (!state.isReadOnly) {
+        setupSearch();
+        document.getElementById('clearAllBtn').addEventListener('click', clearAllData);
+    }
+});
 
             // ---- Работа с API Сервера (SQLite) ----
             const API_BASE_URL = window.location.origin; 
