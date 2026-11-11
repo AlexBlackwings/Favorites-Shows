@@ -634,6 +634,10 @@
                     state.viewerId = storedId;
                 }
 
+                // --- ВРЕМЕННАЯ ОТЛАДКА ---
+                alert('startParam: ' + startParam + '\nsharedId: ' + sharedId + '\nviewerId: ' + state.viewerId);
+                // -------------------------
+
                 if (sharedId) {
                     state.userId = sharedId;
                     state.isReadOnly = true;
@@ -678,43 +682,43 @@
             // ---- Работа с API Сервера ----
             const API_BASE_URL = window.location.origin; 
 
-async function loadUserData() {
-    if (!state.userId) {
-        alert('ОШИБКА: state.userId пустой!');
-        return;
-    }
-    
-    const fetchUrl = `${API_BASE_URL}/api/shows/${state.userId}`;
-    
-    try {
-        const response = await fetch(fetchUrl);
-        if (response.ok) {
-            const data = await response.json();
-            
-            // ВРЕМЕННАЯ ОТЛАДКА
-            alert('ID: ' + state.userId + '\nURL: ' + fetchUrl + '\nПришло: ' + JSON.stringify(data).substring(0, 50));
-            
-            if (Array.isArray(data)) {
-                state.shows = data;
-                state.details = {};
-                state.impressions = {};
-            } else {
-                state.shows = data.shows || [];
-                state.details = data.details || {};
-                state.impressions = data.impressions || {};
+            async function loadUserData() {
+                if (!state.userId) {
+                    alert('ОШИБКА: state.userId пустой!');
+                    return;
+                }
+                
+                const fetchUrl = `${API_BASE_URL}/api/shows/${state.userId}`;
+                
+                // --- ВРЕМЕННАЯ ОТЛАДКА ---
+                alert('Запрос к: ' + fetchUrl);
+                // -------------------------
+
+                try {
+                    const response = await fetch(fetchUrl);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (Array.isArray(data)) {
+                            state.shows = data;
+                            state.details = {};
+                            state.impressions = {};
+                        } else {
+                            state.shows = data.shows || [];
+                            state.details = data.details || {};
+                            state.impressions = data.impressions || {};
+                        }
+                    } else {
+                        alert('Ошибка сервера: ' + response.status);
+                        state.shows = [];
+                    }
+                } catch (error) {
+                    alert('Ошибка сети: ' + error.message);
+                    state.shows = [];
+                }
+                state.dataLoaded = true;
+                renderShowList();
+                updateHeaderTitle();
             }
-        } else {
-            alert('Ошибка сервера: ' + response.status + '\nURL: ' + fetchUrl);
-            state.shows = [];
-        }
-    } catch (error) {
-        alert('Ошибка сети: ' + error.message);
-        state.shows = [];
-    }
-    state.dataLoaded = true;
-    renderShowList();
-    updateHeaderTitle();
-}
 
             async function saveUserData() {
                 if (!state.userId || state.isReadOnly) return;
