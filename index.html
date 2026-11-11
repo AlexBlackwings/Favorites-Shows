@@ -620,19 +620,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     console.log('Полученный start_param:', startParam);
-    // ВРЕМЕННАЯ ОТЛАДКА
-    let debugInfo = "startParam: " + startParam + "\n\n";
-    debugInfo += "URL: " + window.location.href + "\n\n";
-    
-    if (window.Telegram?.WebApp) {
-        debugInfo += "start_param (API): " + window.Telegram.WebApp.initDataUnsafe?.start_param + "\n";
-        debugInfo += "initDataUnsafe: " + JSON.stringify(window.Telegram.WebApp.initDataUnsafe) + "\n";
-    } else {
-        debugInfo += "Telegram WebApp НЕ ОБНАРУЖЕН\n";
-    }
-    alert(debugInfo);
-    // КОНЕЦ ОТЛАДКИ
-
+   
     // 3. Определяем, чей список мы смотрим
     let sharedId = null;
     if (startParam && startParam.startsWith('view_')) {
@@ -748,21 +736,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             // ---- Функция "Поделиться" ----
-            function shareList() {
-                // ВАЖНО: Замените YOUR_BOT_USERNAME на юзернейм вашего бота!
-                const botUsername = "favshows_bot"; 
-                
-                // Генерируем ссылку с параметром startapp
-                const shareUrl = `https://t.me/${botUsername}?startapp=view_${state.userId}`;
-                const text = "Посмотри мой рейтинг сериалов!";
-                
-                if (window.Telegram?.WebApp) {
-                    window.Telegram.WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(text)}`);
-                } else {
-                    navigator.clipboard.writeText(shareUrl);
-                    alert('Ссылка на ваш список скопирована!');
-                }
-            }
+function shareList() {
+    const botUsername = "favshows_bot";
+    const shortName = "myapp"; // То имя, которое мы нашли в BotFather
+    
+    // Формируем правильную ссылку
+    const shareUrl = `https://t.me/${botUsername}/${shortName}?startapp=view_${state.userId}`;
+    const text = "Посмотри мой рейтинг сериалов!";
+    
+    if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.openTelegramLink(
+            `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(text)}`
+        );
+    } else {
+        navigator.clipboard.writeText(shareUrl);
+        alert('Ссылка скопирована:\n' + shareUrl);
+    }
+}
 
             // ---- Поиск ----
             function setupSearch() {
