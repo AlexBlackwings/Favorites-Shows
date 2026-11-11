@@ -8,7 +8,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Все стили без изменений (такие же, как в предыдущих версиях) */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #0f0f0f;
@@ -449,9 +448,9 @@
 
             let state = {
                 userId: null,
-                shows: [],          // основная информация (без summary, actors, impressions)
-                details: {},         // детали по id: { summary, actors }
-                impressions: {},     // впечатления по id
+                shows: [],
+                details: {},
+                impressions: {},
                 currentModalShowId: null,
                 dataLoaded: false
             };
@@ -572,7 +571,7 @@
             }
 
             // ---- Инициализация ----
-            document.addEventListener('DOMContentLoaded', () => {
+            document.addEventListener('DOMContentLoaded', async () => {
                 cleanImageCache();
                 if (window.Telegram?.WebApp) {
                     window.Telegram.WebApp.ready();
@@ -580,102 +579,76 @@
                     const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
                     state.userId = tgUser ? 'tg_' + tgUser.id : 'web_' + Math.random().toString(36).substr(2, 9);
                 } else {
-                    state.userId = 'web_' + Math.random().toString(36).substr(2, 9);
+                    let storedId = localStorage.getItem('tma_user_id');
+                    if (!storedId) {
+                        storedId = 'web_' + Math.random().toString(36).substr(2, 9);
+                        localStorage.setItem('tma_user_id', storedId);
+                    }
+                    state.userId = storedId;
                 }
                 
-                loadUserData(() => {
-                    renderShowList();
-                    updateHeaderTitle();
-                });
-                
+                await loadUserData();
                 setupSearch();
                 document.getElementById('clearAllBtn').addEventListener('click', clearAllData);
             });
 
-            // ---- Данные пользователя (три ключа: shows, details, impressions) ----
-            function loadUserData(callback) {
-                const showsKey = `tma_shows_${state.userId}`;
-                const detailsKey = `tma_details_${state.userId}`;
-                const impressionsKey = `tma_impressions_${state.userId}`;
-                
-                if (window.Telegram?.WebApp?.CloudStorage) {
-                    Promise.all([
-                        new Promise(resolve => Telegram.WebApp.CloudStorage.getItem(showsKey, (err, val) => resolve(val))),
-                        new Promise(resolve => Telegram.WebApp.CloudStorage.getItem(detailsKey, (err, val) => resolve(val))),
-                        new Promise(resolve => Telegram.WebApp.CloudStorage.getItem(impressionsKey, (err, val) => resolve(val)))
-                    ]).then(([showsVal, detailsVal, impressionsVal]) => {
-                        try {
-                            state.shows = showsVal ? JSON.parse(showsVal) : [];
-                        } catch {
-                            state.shows = [];
-                        }
-                        try {
-                            state.details = detailsVal ? JSON.parse(detailsVal) : {};
-                        } catch {
-                            state.details = {};
-                        }
-                        try {
-                            state.impressions = impressionsVal ? JSON.parse(impressionsVal) : {};
-                        } catch {
-                            state.impressions = {};
-                        }
-                        state.dataLoaded = true;
-                        if (callback) callback();
-                    });
-                } else {
-                    try {
-                        state.shows = JSON.parse(localStorage.getItem(showsKey) || '[]');
-                        state.details = JSON.parse(localStorage.getItem(detailsKey) || '{}');
-                        state.impressions = JSON.parse(localStorage.getItem(impressionsKey) || '{}');
-                    } catch {
-                        state.shows = [];
-                        state.details = {};
-                        state.impressions = {};
-                    }
-                    state.dataLoaded = true;
-                    if (callback) callback();
-                }
-            }
+            // ---- Работа с API Сервера (SQLite) ----
+            const API_BASE_URL = window.location.origin; 
 
-            function saveUserData() {
-                const showsKey = `tma_shows_${state.userId}`;
-                const detailsKey = `tma_details_${state.userId}`;
-                const impressionsKey = `tma_impressions_${state.userId}`;
-                
-                // Основная информация (без summary, actors, impressions)
-                const showsData = JSON.stringify(state.shows.map(show => {
-                    const { summary, actors, ...rest } = show;
-                    return rest;
-                }));
-                
-                const detailsData = JSON.stringify(state.details);
-                const impressionsData = JSON.stringify(state.impressions);
-                
-                if (window.Telegram?.WebApp?.CloudStorage) {
-                    Telegram.WebApp.CloudStorage.setItem(showsKey, showsData, (err) => {
-                        if (err) console.warn('CloudStorage shows save error:', err);
-                    });
-                    Telegram.WebApp.CloudStorage.setItem(detailsKey, detailsData, (err) => {
-                        if (err) console.warn('CloudStorage details save error:', err);
-                    });
-                    Telegram.WebApp.CloudStorage.setItem(impressionsKey, impressionsData, (err) => {
-                        if (err) console.warn('CloudStorage impressions save error:', err);
-                    });
-                } else {
-                    localStorage.setItem(showsKey, showsData);
-                    localStorage.setItem(detailsKey, detailsData);
-                    localStorage.setItem(impressionsKey, impressionsData);
+            async function loadUserData() {
+                if (!state.userId) return;
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/shows/${state.userId}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (Array.isArray(data)) {
+                            // Если вдруг на сервере старый формат (просто массив)
+                            state.shows = data;
+                            state.details = {};
+                            state.impressions = {};
+                        } else {
+                            // Наш новый формат (объект с тремя ключами)
+                            state.shows = data.shows || [];
+                            state.details = data.details || {};
+                            state.impressions = data.impressions || {};
+                        }
+                    }
+                } catch (error) {
+                    console.error('Failed to load data from server:', error);
                 }
+                state.dataLoaded = true;
                 renderShowList();
                 updateHeaderTitle();
             }
 
-            function clearAllData() {
+            async function saveUserData() {
+                if (!state.userId) return;
+                const payload = {
+                    shows: state.shows,
+                    details: state.details,
+                    impressions: state.impressions
+                };
+                
+                try {
+                    await fetch(`${API_BASE_URL}/api/shows/${state.userId}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                } catch (error) {
+                    console.error('Failed to save data to server:', error);
+                }
+                
+                renderShowList();
+                updateHeaderTitle();
+            }
+
+            async function clearAllData() {
                 if (confirm('Удалить весь список сериалов?')) {
                     state.shows = [];
                     state.details = {};
                     state.impressions = {};
-                    saveUserData();
+                    await saveUserData();
                     window.Telegram?.WebApp.HapticFeedback?.notificationOccurred('warning');
                 }
             }
@@ -1027,13 +1000,12 @@
                     
                     state.shows.push(newShow);
                     
-                    // Сохраняем детали отдельно
                     state.details[id] = {
                         summary: newShow.summary,
                         actors: newShow.actors
                     };
                     
-                    saveUserData();
+                    await saveUserData();
                     
                     document.getElementById('searchInput').value = '';
                     document.getElementById('searchResults').classList.add('hidden');
@@ -1044,7 +1016,7 @@
                 }
             }
 
-            function removeShow(event, id) {
+            async function removeShow(event, id) {
                 event.preventDefault();
                 event.stopPropagation();
                 
@@ -1052,17 +1024,17 @@
                     const item = document.querySelector(`[data-show-id="${id}"]`);
                     if (item) {
                         item.classList.add('removing');
-                        setTimeout(() => {
+                        setTimeout(async () => {
                             state.shows = state.shows.filter(s => s.id !== id);
                             delete state.details[id];
                             delete state.impressions[id];
-                            saveUserData();
+                            await saveUserData();
                         }, 300);
                     } else {
                         state.shows = state.shows.filter(s => s.id !== id);
                         delete state.details[id];
                         delete state.impressions[id];
-                        saveUserData();
+                        await saveUserData();
                     }
                     
                     if(window.Telegram && window.Telegram.WebApp.HapticFeedback) {
@@ -1217,13 +1189,12 @@
                 });
             }
 
-            // ---- Модальное окно (с объединёнными данными из shows + details) ----
+            // ---- Модальное окно ----
             async function openModal(id) {
                 const show = state.shows.find(s => s.id === id);
                 if (!show) return;
                 state.currentModalShowId = id;
 
-                // Подтягиваем детали из state.details
                 const details = state.details[id] || {};
                 
                 const posterImg = document.getElementById('modalPoster');
@@ -1287,7 +1258,7 @@
                 input.focus();
             }
 
-            function saveRating() {
+            async function saveRating() {
                 const input = document.getElementById('ratingInput');
                 let val = parseFloat(input.value);
                 if (isNaN(val)) val = 0;
@@ -1297,7 +1268,7 @@
                 const showIndex = state.shows.findIndex(s => s.id === state.currentModalShowId);
                 if (showIndex !== -1) {
                     state.shows[showIndex].rating = val;
-                    saveUserData();
+                    await saveUserData();
                     const displayRating = state.shows[showIndex].imdbRating || val;
                     document.getElementById('modalRating').innerText = displayRating.toFixed(2);
                     document.getElementById('ratingInputContainer').classList.add('hidden');
@@ -1305,11 +1276,11 @@
                 }
             }
 
-            function saveImpressions() {
+            async function saveImpressions() {
                 const text = document.getElementById('impressionsInput').value;
                 if (state.currentModalShowId) {
                     state.impressions[state.currentModalShowId] = text;
-                    saveUserData(); // теперь impressions сохраняются через общую функцию
+                    await saveUserData();
                     window.Telegram?.WebApp.HapticFeedback?.notificationOccurred('success');
                 }
             }
