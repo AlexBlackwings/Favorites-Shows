@@ -285,15 +285,15 @@
 <body class="h-screen flex flex-col">
 
     <!-- Баннер режима просмотра -->
-<div id="readOnlyBanner" class="hidden bg-blue-600 text-white text-center py-2 text-xs font-semibold px-4 shadow-md z-50">
-    Вы просматриваете список друга. <span onclick="goToOwnList()" class="underline ml-1 cursor-pointer">Вернуться к своему</span>
-</div>
+    <div id="readOnlyBanner" class="hidden bg-blue-600 text-white text-center py-2 text-xs font-semibold px-4 shadow-md z-50">
+        Вы просматриваете список друга. <span onclick="window.location.href = window.location.origin + window.location.pathname;" class="underline ml-1 cursor-pointer">Вернуться к своему</span>
+    </div>
 
     <header class="p-4 sticky top-0 z-20 bg-[#0f0f0f]/95 backdrop-blur-md border-b border-white/5 shadow-lg">
         <div class="flex items-center justify-between">
             <h1 class="text-lg font-bold tracking-tight text-white" id="dynamicTitle">Мой рейтинг из 0 сериалов</h1>
             <div class="flex gap-3 items-center">
-                <button id="shareBtn" class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg transition-colors hidden sm:block">
+                <button id="shareBtn" class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg transition-colors hidden">
                     Поделиться
                 </button>
                 <button id="clearAllBtn" class="text-xs text-gray-500 hover:text-red-400 transition-colors">
@@ -474,7 +474,6 @@
             }
 
             function updateHeaderTitle() {
-                const prefix = state.isReadOnly ? 'Рейтинг друга:' : 'Мой рейтинг из';
                 if (state.isReadOnly) {
                     document.getElementById('dynamicTitle').textContent = `Рейтинг друга (${state.shows.length})`;
                 } else {
@@ -589,128 +588,116 @@
             }
 
             // ---- Инициализация ----
-document.addEventListener('DOMContentLoaded', async () => {
-    cleanImageCache();
-    
-    // 1. Инициализация Telegram WebApp
-    if (window.Telegram?.WebApp) {
-        window.Telegram.WebApp.ready();
-        window.Telegram.WebApp.expand();
-    }
+            document.addEventListener('DOMContentLoaded', async () => {
+                cleanImageCache();
+                
+                // 1. Инициализация Telegram WebApp
+                if (window.Telegram?.WebApp) {
+                    window.Telegram.WebApp.ready();
+                    window.Telegram.WebApp.expand();
+                }
 
-    // 2. Пытаемся получить start_param из ВСЕХ возможных источников
-    let startParam = null;
-    const tgWebApp = window.Telegram?.WebApp;
-    
-    if (tgWebApp) {
-        // Источник 1: initDataUnsafe.start_param (основной)
-        if (tgWebApp.initDataUnsafe?.start_param) {
-            startParam = tgWebApp.initDataUnsafe.start_param;
-        } 
-        // Источник 2: свойство startParam (на случай задержки в iOS)
-        else if (tgWebApp.startParam) {
-            startParam = tgWebApp.startParam;
-        }
-    }
+                // 2. Пытаемся получить start_param из ВСЕХ возможных источников
+                let startParam = null;
+                const tgWebApp = window.Telegram?.WebApp;
+                
+                if (tgWebApp) {
+                    if (tgWebApp.initDataUnsafe?.start_param) {
+                        startParam = tgWebApp.initDataUnsafe.start_param;
+                    } else if (tgWebApp.startParam) {
+                        startParam = tgWebApp.startParam;
+                    }
+                }
 
-    // Источник 3: Разбор URL (tgWebAppStartParam)
-    if (!startParam) {
-        const urlParams = new URLSearchParams(window.location.search);
-        startParam = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp');
-    }
+                if (!startParam) {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    startParam = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp');
+                }
 
-    console.log('Полученный start_param:', startParam);
-   
-    // 3. Определяем, чей список мы смотрим
-    let sharedId = null;
-    if (startParam && startParam.startsWith('view_')) {
-        sharedId = startParam.replace('view_', '');
-    }
-    
-    // Дополнительная проверка через обычные URL параметры (если открыто в браузере)
-    const urlParams = new URLSearchParams(window.location.search);
-    if (!sharedId && urlParams.has('view_user')) {
-        sharedId = urlParams.get('view_user');
-    }
+                console.log('Полученный start_param:', startParam);
 
-    // 4. Определяем ID зрителя (того, кто открыл приложение)
-    let tgUser = tgWebApp?.initDataUnsafe?.user;
-    if (tgUser && tgUser.id) {
-        state.viewerId = 'tg_' + tgUser.id;
-    } else {
-        let storedId = localStorage.getItem('tma_user_id');
-        if (!storedId) {
-            storedId = 'web_' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('tma_user_id', storedId);
-        }
-        state.viewerId = storedId;
-    }
+                // 3. Определяем, чей список мы смотрим
+                let sharedId = null;
+                if (startParam && startParam.startsWith('view_')) {
+                    sharedId = startParam.replace('view_', '');
+                }
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                if (!sharedId && urlParams.has('view_user')) {
+                    sharedId = urlParams.get('view_user');
+                }
 
-    // 5. Включаем режим "Только чтение"
-    if (sharedId) {
-        state.userId = sharedId;
-        state.isReadOnly = true;
-        
-        document.getElementById('readOnlyBanner').classList.remove('hidden');
-        document.getElementById('searchContainer').style.display = 'none';
-        document.getElementById('clearAllBtn').style.display = 'none';
-        document.getElementById('shareBtn').style.display = 'none';
-        document.getElementById('emptyStateText').innerHTML = 'Список этого пользователя пока пуст.';
-    } else {
-        state.userId = state.viewerId;
-        state.isReadOnly = false;
-        
-        const shareBtn = document.getElementById('shareBtn');
-        shareBtn.classList.remove('hidden');
-        shareBtn.addEventListener('click', shareList);
-    }
-    
-    console.log('Текущий User ID:', state.userId, 'ReadOnly:', state.isReadOnly);
+                // 4. Определяем ID зрителя (того, кто открыл приложение)
+                let tgUser = tgWebApp?.initDataUnsafe?.user;
+                if (tgUser && tgUser.id) {
+                    state.viewerId = 'tg_' + tgUser.id;
+                } else {
+                    let storedId = localStorage.getItem('tma_user_id');
+                    if (!storedId) {
+                        storedId = 'web_' + Math.random().toString(36).substr(2, 9);
+                        localStorage.setItem('tma_user_id', storedId);
+                    }
+                    state.viewerId = storedId;
+                }
 
-    await loadUserData();
-    
-    if (!state.isReadOnly) {
-        setupSearch();
-        document.getElementById('clearAllBtn').addEventListener('click', clearAllData);
-    }
-});
+                // 5. Включаем режим "Только чтение"
+                if (sharedId) {
+                    state.userId = sharedId;
+                    state.isReadOnly = true;
+                    
+                    document.getElementById('readOnlyBanner').classList.remove('hidden');
+                    document.getElementById('searchContainer').style.display = 'none';
+                    document.getElementById('clearAllBtn').style.display = 'none';
+                    document.getElementById('shareBtn').style.display = 'none';
+                    document.getElementById('emptyStateText').innerHTML = 'Список этого пользователя пока пуст.';
+                } else {
+                    state.userId = state.viewerId;
+                    state.isReadOnly = false;
+                    
+                    const shareBtn = document.getElementById('shareBtn');
+                    shareBtn.classList.remove('hidden');
+                    shareBtn.addEventListener('click', shareList);
+                }
+                
+                console.log('Текущий User ID:', state.userId, 'ReadOnly:', state.isReadOnly);
+
+                await loadUserData();
+                
+                if (!state.isReadOnly) {
+                    setupSearch();
+                    document.getElementById('clearAllBtn').addEventListener('click', clearAllData);
+                }
+            });
 
             // ---- Работа с API Сервера (SQLite) ----
             const API_BASE_URL = window.location.origin; 
 
-async function loadUserData() {
-    if (!state.userId) return;
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/shows/${state.userId}`);
-        if (response.ok) {
-            const data = await response.json();
-            
-            // ВРЕМЕННАЯ ОТЛАДКА: Покажет первые 150 символов того, что пришло с сервера
-            alert('Для ID: ' + state.userId + '\nПришло с сервера: ' + JSON.stringify(data).substring(0, 150) + '...');
-            
-            if (Array.isArray(data)) {
-                state.shows = data;
-                state.details = {};
-                state.impressions = {};
-            } else {
-                state.shows = data.shows || [];
-                state.details = data.details || {};
-                state.impressions = data.impressions || {};
+            async function loadUserData() {
+                if (!state.userId) return;
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/shows/${state.userId}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (Array.isArray(data)) {
+                            state.shows = data;
+                            state.details = {};
+                            state.impressions = {};
+                        } else {
+                            state.shows = data.shows || [];
+                            state.details = data.details || {};
+                            state.impressions = data.impressions || {};
+                        }
+                    }
+                } catch (error) {
+                    console.error('Failed to load data from server:', error);
+                }
+                state.dataLoaded = true;
+                renderShowList();
+                updateHeaderTitle();
             }
-        } else {
-            alert('Ошибка сервера: ' + response.status);
-        }
-    } catch (error) {
-        alert('Ошибка сети: ' + error.message);
-        console.error('Failed to load data from server:', error);
-    }
-    state.dataLoaded = true;
-    renderShowList();
-    updateHeaderTitle();
-}
 
             async function saveUserData() {
-                if (!state.userId || state.isReadOnly) return; // Блокируем сохранение в режиме чтения
+                if (!state.userId || state.isReadOnly) return;
                 const payload = {
                     shows: state.shows,
                     details: state.details,
@@ -743,23 +730,20 @@ async function loadUserData() {
             }
 
             // ---- Функция "Поделиться" ----
-function shareList() {
-    const botUsername = "favshows_bot";
-    const shortName = "myapp"; // То имя, которое мы нашли в BotFather
-    
-    // Формируем правильную ссылку
-    const shareUrl = `https://t.me/${botUsername}/${shortName}?startapp=view_${state.userId}`;
-    const text = "Посмотри мой рейтинг сериалов!";
-    
-    if (window.Telegram?.WebApp) {
-        window.Telegram.WebApp.openTelegramLink(
-            `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(text)}`
-        );
-    } else {
-        navigator.clipboard.writeText(shareUrl);
-        alert('Ссылка скопирована:\n' + shareUrl);
-    }
-}
+            function shareList() {
+                const botUsername = "favshows_bot"; 
+                const shortName = "myapp"; 
+                
+                const shareUrl = `https://t.me/${botUsername}/${shortName}?startapp=view_${state.userId}`;
+                const text = "Посмотри мой рейтинг сериалов!";
+                
+                if (window.Telegram?.WebApp) {
+                    window.Telegram.WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(text)}`);
+                } else {
+                    navigator.clipboard.writeText(shareUrl);
+                    alert('Ссылка на ваш список скопирована!');
+                }
+            }
 
             // ---- Поиск ----
             function setupSearch() {
@@ -1087,7 +1071,7 @@ function shareList() {
             }
 
             async function addShowFromApi(id, title, originalTitle, posterUrl, year, endYear, episodes, genres, network, status, runtime, summary, actors, rating, country, age) {
-                if (state.isReadOnly) return; // Запрет на изменение
+                if (state.isReadOnly) return;
                 if (!state.shows.find(s => s.id === id)) {
                     const details = await fetchShowDetails(id);
                     
@@ -1135,7 +1119,7 @@ function shareList() {
             async function removeShow(event, id) {
                 event.preventDefault();
                 event.stopPropagation();
-                if (state.isReadOnly) return; // Запрет на удаление
+                if (state.isReadOnly) return;
                 
                 if(confirm('Удалить этот сериал из списка?')) {
                     const item = document.querySelector(`[data-show-id="${id}"]`);
@@ -1187,123 +1171,126 @@ function shareList() {
                 const sortedShows = [...state.shows].sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1));
 
                 sortedShows.forEach((show, index) => {
-                    const listItem = document.createElement('div');
-                    listItem.className = 'list-item adding';
-                    listItem.setAttribute('data-show-id', show.id);
+                    try {
+                        const listItem = document.createElement('div');
+                        listItem.className = 'list-item adding';
+                        listItem.setAttribute('data-show-id', show.id);
 
-                    const ratingClass = getRatingClass(show.rating);
-                    const ratingDisplay = show.rating !== null && show.rating !== undefined ? show.rating.toFixed(2) : '--';
+                        const ratingClass = getRatingClass(show.rating);
+                        const ratingDisplay = show.rating !== null && show.rating !== undefined ? show.rating.toFixed(2) : '--';
 
-                    const safePosterUrl = optimizeImageUrl(show.posterUrl);
-                    const yearRange = show.year && show.endYear && show.endYear !== show.year ? `${show.year} – ${show.endYear}` : (show.year || '—');
-                    const episodesText = show.episodes && show.episodes > 0 ? `${show.episodes} серий` : '';
+                        const safePosterUrl = optimizeImageUrl(show.posterUrl);
+                        const yearRange = show.year && show.endYear && show.endYear !== show.year ? `${show.year} – ${show.endYear}` : (show.year || '—');
+                        const episodesText = show.episodes && show.episodes > 0 ? `${show.episodes} серий` : '';
 
-                    const card = document.createElement('div');
-                    card.className = 'show-card';
-                    card.addEventListener('click', (e) => { if (!e.target.closest('.delete-btn')) openModal(show.id); });
+                        const card = document.createElement('div');
+                        card.className = 'show-card';
+                        card.addEventListener('click', (e) => { if (!e.target.closest('.delete-btn')) openModal(show.id); });
 
-                    const posterContainer = document.createElement('div');
-                    posterContainer.className = 'poster-container';
-                    const posterImg = document.createElement('img');
-                    posterImg.className = 'w-full h-full object-cover poster-img';
-                    posterImg.loading = 'lazy';
-                    posterImg.alt = show.title;
-                    const placeholderDiv = document.createElement('div');
-                    placeholderDiv.className = 'poster-placeholder';
-                    placeholderDiv.innerHTML = '<svg fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4-3h2v13h-2z"/></svg>';
-                    posterContainer.appendChild(posterImg);
-                    posterContainer.appendChild(placeholderDiv);
-                    loadImageWithRetry(posterImg, safePosterUrl);
+                        const posterContainer = document.createElement('div');
+                        posterContainer.className = 'poster-container';
+                        const posterImg = document.createElement('img');
+                        posterImg.className = 'w-full h-full object-cover poster-img';
+                        posterImg.loading = 'lazy';
+                        posterImg.alt = show.title;
+                        const placeholderDiv = document.createElement('div');
+                        placeholderDiv.className = 'poster-placeholder';
+                        placeholderDiv.innerHTML = '<svg fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4-3h2v13h-2z"/></svg>';
+                        posterContainer.appendChild(posterImg);
+                        posterContainer.appendChild(placeholderDiv);
+                        loadImageWithRetry(posterImg, safePosterUrl);
 
-                    const contentDiv = document.createElement('div');
-                    contentDiv.className = 'show-card-content';
+                        const contentDiv = document.createElement('div');
+                        contentDiv.className = 'show-card-content';
 
-                    const title = document.createElement('h3');
-                    title.className = 'show-title';
-                    title.textContent = show.title;
-                    contentDiv.appendChild(title);
+                        const title = document.createElement('h3');
+                        title.className = 'show-title';
+                        title.textContent = show.title;
+                        contentDiv.appendChild(title);
 
-                    if (show.originalTitle && show.originalTitle !== show.title && !isRussian(show.title)) {
-                        const orig = document.createElement('p');
-                        orig.className = 'original-title';
-                        orig.textContent = show.originalTitle;
-                        contentDiv.appendChild(orig);
+                        if (show.originalTitle && show.originalTitle !== show.title && !isRussian(show.title)) {
+                            const orig = document.createElement('p');
+                            orig.className = 'original-title';
+                            orig.textContent = show.originalTitle;
+                            contentDiv.appendChild(orig);
+                        }
+
+                        const row1 = document.createElement('div');
+                        row1.className = 'meta-row';
+                        if (show.status) {
+                            const statusSpan = document.createElement('span');
+                            if (show.status === 'Running') { statusSpan.className = 'status-badge status-running'; statusSpan.textContent = '🟢 Продолжается'; }
+                            else if (show.status === 'Ended') { statusSpan.className = 'status-badge status-ended'; statusSpan.textContent = '🔴 Завершён'; }
+                            if (statusSpan.textContent) row1.appendChild(statusSpan);
+                        }
+                        if (show.network) {
+                            const netSpan = document.createElement('span');
+                            netSpan.className = 'platform-tag';
+                            netSpan.textContent = `📺 ${show.network}`;
+                            row1.appendChild(netSpan);
+                        }
+                        if (row1.children.length) contentDiv.appendChild(row1);
+
+                        const row2 = document.createElement('div');
+                        row2.className = 'meta-row';
+                        if (show.genres && show.genres.length) {
+                            show.genres.slice(0, 3).forEach(g => {
+                                const genreSpan = document.createElement('span');
+                                genreSpan.className = 'genre-tag';
+                                genreSpan.textContent = translateGenre(g);
+                                row2.appendChild(genreSpan);
+                            });
+                        }
+                        if (row2.children.length) contentDiv.appendChild(row2);
+
+                        const row3 = document.createElement('div');
+                        row3.className = 'meta-row';
+                        if (yearRange) {
+                            const yearSpan = document.createElement('span');
+                            yearSpan.className = 'meta-tag';
+                            yearSpan.innerHTML = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="10" height="10"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg> ${yearRange}`;
+                            row3.appendChild(yearSpan);
+                        }
+                        if (episodesText) {
+                            const epSpan = document.createElement('span');
+                            epSpan.className = 'meta-tag';
+                            epSpan.innerHTML = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="10" height="10"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path></svg> ${episodesText}`;
+                            row3.appendChild(epSpan);
+                        }
+                        if (row3.children.length) contentDiv.appendChild(row3);
+
+                        const rightDiv = document.createElement('div');
+                        rightDiv.className = 'show-card-right';
+                        const numberDiv = document.createElement('div');
+                        numberDiv.className = 'show-card-number';
+                        numberDiv.textContent = `#${index + 1}`;
+                        const actionsDiv = document.createElement('div');
+                        actionsDiv.className = 'show-card-actions';
+                        const ratingDiv = document.createElement('div');
+                        ratingDiv.className = `rating-badge ${ratingClass}`;
+                        ratingDiv.textContent = ratingDisplay;
+                        
+                        actionsDiv.appendChild(ratingDiv);
+                        
+                        if (!state.isReadOnly) {
+                            const deleteBtn = document.createElement('button');
+                            deleteBtn.className = 'delete-btn';
+                            deleteBtn.textContent = '✕';
+                            deleteBtn.addEventListener('click', (e) => removeShow(e, show.id));
+                            actionsDiv.appendChild(deleteBtn);
+                        }
+                        
+                        rightDiv.appendChild(numberDiv);
+                        rightDiv.appendChild(actionsDiv);
+
+                        card.appendChild(posterContainer);
+                        card.appendChild(contentDiv);
+                        card.appendChild(rightDiv);
+                        listItem.appendChild(card);
+                        container.appendChild(listItem);
+                    } catch (err) {
+                        console.error('Ошибка отрисовки карточки:', err, show);
                     }
-
-                    const row1 = document.createElement('div');
-                    row1.className = 'meta-row';
-                    if (show.status) {
-                        const statusSpan = document.createElement('span');
-                        if (show.status === 'Running') { statusSpan.className = 'status-badge status-running'; statusSpan.textContent = '🟢 Продолжается'; }
-                        else if (show.status === 'Ended') { statusSpan.className = 'status-badge status-ended'; statusSpan.textContent = '🔴 Завершён'; }
-                        if (statusSpan.textContent) row1.appendChild(statusSpan);
-                    }
-                    if (show.network) {
-                        const netSpan = document.createElement('span');
-                        netSpan.className = 'platform-tag';
-                        netSpan.textContent = `📺 ${show.network}`;
-                        row1.appendChild(netSpan);
-                    }
-                    if (row1.children.length) contentDiv.appendChild(row1);
-
-                    const row2 = document.createElement('div');
-                    row2.className = 'meta-row';
-                    if (show.genres?.length) {
-                        show.genres.slice(0, 3).forEach(g => {
-                            const genreSpan = document.createElement('span');
-                            genreSpan.className = 'genre-tag';
-                            genreSpan.textContent = translateGenre(g);
-                            row2.appendChild(genreSpan);
-                        });
-                    }
-                    if (row2.children.length) contentDiv.appendChild(row2);
-
-                    const row3 = document.createElement('div');
-                    row3.className = 'meta-row';
-                    if (yearRange) {
-                        const yearSpan = document.createElement('span');
-                        yearSpan.className = 'meta-tag';
-                        yearSpan.innerHTML = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="10" height="10"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg> ${yearRange}`;
-                        row3.appendChild(yearSpan);
-                    }
-                    if (episodesText) {
-                        const epSpan = document.createElement('span');
-                        epSpan.className = 'meta-tag';
-                        epSpan.innerHTML = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="10" height="10"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path></svg> ${episodesText}`;
-                        row3.appendChild(epSpan);
-                    }
-                    if (row3.children.length) contentDiv.appendChild(row3);
-
-                    const rightDiv = document.createElement('div');
-                    rightDiv.className = 'show-card-right';
-                    const numberDiv = document.createElement('div');
-                    numberDiv.className = 'show-card-number';
-                    numberDiv.textContent = `#${index + 1}`;
-                    const actionsDiv = document.createElement('div');
-                    actionsDiv.className = 'show-card-actions';
-                    const ratingDiv = document.createElement('div');
-                    ratingDiv.className = `rating-badge ${ratingClass}`;
-                    ratingDiv.textContent = ratingDisplay;
-                    
-                    actionsDiv.appendChild(ratingDiv);
-                    
-                    // Показываем кнопку удаления только владельцу списка
-                    if (!state.isReadOnly) {
-                        const deleteBtn = document.createElement('button');
-                        deleteBtn.className = 'delete-btn';
-                        deleteBtn.textContent = '✕';
-                        deleteBtn.addEventListener('click', (e) => removeShow(e, show.id));
-                        actionsDiv.appendChild(deleteBtn);
-                    }
-                    
-                    rightDiv.appendChild(numberDiv);
-                    rightDiv.appendChild(actionsDiv);
-
-                    card.appendChild(posterContainer);
-                    card.appendChild(contentDiv);
-                    card.appendChild(rightDiv);
-                    listItem.appendChild(card);
-                    container.appendChild(listItem);
                 });
             }
 
@@ -1341,7 +1328,7 @@ function shareList() {
 
                 const genresContainer = document.getElementById('modalGenres');
                 genresContainer.innerHTML = '';
-                if (show.genres?.length) {
+                if (show.genres && show.genres.length) {
                     show.genres.forEach(g => {
                         const tag = document.createElement('span');
                         tag.className = 'genre-tag';
@@ -1355,7 +1342,6 @@ function shareList() {
                 document.getElementById('modalSummary').innerText = details.summary || show.summary || 'Описание отсутствует';
                 document.getElementById('modalActors').innerText = details.actors || show.actors || 'Информация недоступна';
                 
-                // Режим просмотра рецензии vs редактирования
                 const impressionsText = state.impressions[show.id] || '';
                 
                 if (state.isReadOnly) {
@@ -1389,9 +1375,11 @@ function shareList() {
                 const container = document.getElementById('ratingInputContainer');
                 const input = document.getElementById('ratingInput');
                 const show = state.shows.find(s => s.id === state.currentModalShowId);
-                input.value = show.rating ?? '';
-                container.classList.remove('hidden');
-                input.focus();
+                if(show) {
+                    input.value = show.rating ?? '';
+                    container.classList.remove('hidden');
+                    input.focus();
+                }
             }
 
             async function saveRating() {
@@ -1423,13 +1411,6 @@ function shareList() {
                 }
             }
 
-            function goToOwnList() {
-    // Принудительно перезагружаем страницу по текущему адресу, убирая параметры
-    window.location.href = window.location.origin + window.location.pathname;
-}
-// Не забудьте добавить её в экспорт:
-window.goToOwnList = goToOwnList;
-            
             window.openModal = openModal;
             window.closeModal = closeModal;
             window.enableEditRating = enableEditRating;
