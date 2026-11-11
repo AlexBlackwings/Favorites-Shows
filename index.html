@@ -678,33 +678,38 @@
             // ---- Работа с API Сервера ----
             const API_BASE_URL = window.location.origin; 
 
-            async function loadUserData() {
-                if (!state.userId) return;
-                try {
-                    const response = await fetch(`${API_BASE_URL}/api/shows/${state.userId}`);
-                    if (response.ok) {
-                        const data = await response.json();
-                        // Проверка на старый формат и защита от пустых данных
-                        if (Array.isArray(data)) {
-                            state.shows = data;
-                            state.details = {};
-                            state.impressions = {};
-                        } else {
-                            state.shows = data.shows || [];
-                            state.details = data.details || {};
-                            state.impressions = data.impressions || {};
-                        }
-                    } else {
-                        state.shows = [];
-                    }
-                } catch (error) {
-                    console.error('Failed to load data from server:', error);
-                    state.shows = [];
-                }
-                state.dataLoaded = true;
-                renderShowList();
-                updateHeaderTitle();
+async function loadUserData() {
+    if (!state.userId) return;
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/shows/${state.userId}`);
+        if (response.ok) {
+            const data = await response.json();
+            
+            // ВРЕМЕННАЯ ОТЛАДКА (покажет, что видит телефон)
+            alert('ID: ' + state.userId + '\nТип: ' + (Array.isArray(data) ? 'Массив' : 'Объект') + '\nЧто пришло: ' + JSON.stringify(data).substring(0, 100));
+            
+            if (Array.isArray(data)) {
+                state.shows = data;
+                state.details = {};
+                state.impressions = {};
+            } else {
+                state.shows = data.shows || [];
+                state.details = data.details || {};
+                state.impressions = data.impressions || {};
             }
+        } else {
+            alert('Ошибка сервера: ' + response.status);
+            state.shows = [];
+        }
+    } catch (error) {
+        alert('Ошибка сети: ' + error.message);
+        console.error('Failed to load data from server:', error);
+        state.shows = [];
+    }
+    state.dataLoaded = true;
+    renderShowList();
+    updateHeaderTitle();
+}
 
             async function saveUserData() {
                 if (!state.userId || state.isReadOnly) return;
