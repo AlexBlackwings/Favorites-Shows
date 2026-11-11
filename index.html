@@ -634,9 +634,7 @@
                     state.viewerId = storedId;
                 }
 
-                // --- ВРЕМЕННАЯ ОТЛАДКА ---
-                alert('startParam: ' + startParam + '\nsharedId: ' + sharedId + '\nviewerId: ' + state.viewerId);
-                // -------------------------
+
 
                 if (sharedId) {
                     state.userId = sharedId;
@@ -690,9 +688,6 @@
                 
                 const fetchUrl = `${API_BASE_URL}/api/shows/${state.userId}`;
                 
-                // --- ВРЕМЕННАЯ ОТЛАДКА ---
-                alert('Запрос к: ' + fetchUrl);
-                // -------------------------
 
                 try {
                     const response = await fetch(fetchUrl);
