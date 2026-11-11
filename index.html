@@ -401,7 +401,6 @@
 
     <script>
         (function() {
-            // ---- Константы и вспомогательные функции ----
             const TVMAZE_BASE_URL = 'https://api.tvmaze.com';
             const OMDB_BASE_URL = 'https://www.omdbapi.com';
 
@@ -573,11 +572,16 @@
             // ---- Инициализация ----
             document.addEventListener('DOMContentLoaded', async () => {
                 cleanImageCache();
+                
+                // Надежное определение ID пользователя
+                let tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
                 if (window.Telegram?.WebApp) {
                     window.Telegram.WebApp.ready();
                     window.Telegram.WebApp.expand();
-                    const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
-                    state.userId = tgUser ? 'tg_' + tgUser.id : 'web_' + Math.random().toString(36).substr(2, 9);
+                }
+                
+                if (tgUser && tgUser.id) {
+                    state.userId = 'tg_' + tgUser.id;
                 } else {
                     let storedId = localStorage.getItem('tma_user_id');
                     if (!storedId) {
@@ -586,7 +590,8 @@
                     }
                     state.userId = storedId;
                 }
-                
+                console.log('Текущий User ID:', state.userId);
+
                 await loadUserData();
                 setupSearch();
                 document.getElementById('clearAllBtn').addEventListener('click', clearAllData);
@@ -602,16 +607,16 @@
                     if (response.ok) {
                         const data = await response.json();
                         if (Array.isArray(data)) {
-                            // Если вдруг на сервере старый формат (просто массив)
                             state.shows = data;
                             state.details = {};
                             state.impressions = {};
                         } else {
-                            // Наш новый формат (объект с тремя ключами)
                             state.shows = data.shows || [];
                             state.details = data.details || {};
                             state.impressions = data.impressions || {};
                         }
+                    } else {
+                        console.error('Server returned error:', response.status);
                     }
                 } catch (error) {
                     console.error('Failed to load data from server:', error);
@@ -653,7 +658,7 @@
                 }
             }
 
-            // ---- Поиск (полная версия) ----
+            // ---- Поиск ----
             function setupSearch() {
                 const input = document.getElementById('searchInput');
                 const resultsDiv = document.getElementById('searchResults');
@@ -693,6 +698,7 @@
 
                 try {
                     let allResults = [];
+                    let fetchError = false;
                     const seenIds = new Set();
 
                     const searchTerms = [query];
@@ -720,6 +726,7 @@
                             });
                         } catch (e) {
                             console.warn('TVMaze failed:', e);
+                            fetchError = true;
                         }
 
                         if (allResults.length >= 15) break;
@@ -736,6 +743,7 @@
                             });
                         } catch (e) {
                             console.warn('OMDb failed:', e);
+                            fetchError = true;
                         }
                     }
 
@@ -745,7 +753,11 @@
                     if (allResults.length === 0) {
                         const emptyDiv = document.createElement('div');
                         emptyDiv.className = 'p-4 text-center text-sm text-gray-400';
-                        emptyDiv.innerHTML = 'Ничего не найдено 😔<br><span class="text-xs opacity-60">Попробуйте английское название</span>';
+                        if (fetchError) {
+                            emptyDiv.innerHTML = '<span class="text-red-400">Ошибка сети. Проверьте подключение или VPN.</span><br><span class="text-xs opacity-60">Возможно, API заблокирован провайдером.</span>';
+                        } else {
+                            emptyDiv.innerHTML = 'Ничего не найдено 😔<br><span class="text-xs opacity-60">Попробуйте английское название</span>';
+                        }
                         resultsDiv.appendChild(emptyDiv);
                         return;
                     }
@@ -1085,7 +1097,6 @@
                     card.className = 'show-card';
                     card.addEventListener('click', (e) => { if (!e.target.closest('.delete-btn')) openModal(show.id); });
 
-                    // Постер
                     const posterContainer = document.createElement('div');
                     posterContainer.className = 'poster-container';
                     const posterImg = document.createElement('img');
@@ -1114,7 +1125,6 @@
                         contentDiv.appendChild(orig);
                     }
 
-                    // Ряд 1: статус и платформа
                     const row1 = document.createElement('div');
                     row1.className = 'meta-row';
                     if (show.status) {
@@ -1131,7 +1141,6 @@
                     }
                     if (row1.children.length) contentDiv.appendChild(row1);
 
-                    // Ряд 2: жанры
                     const row2 = document.createElement('div');
                     row2.className = 'meta-row';
                     if (show.genres?.length) {
@@ -1144,7 +1153,6 @@
                     }
                     if (row2.children.length) contentDiv.appendChild(row2);
 
-                    // Ряд 3: год и серии
                     const row3 = document.createElement('div');
                     row3.className = 'meta-row';
                     if (yearRange) {
@@ -1161,7 +1169,6 @@
                     }
                     if (row3.children.length) contentDiv.appendChild(row3);
 
-                    // Правая панель
                     const rightDiv = document.createElement('div');
                     rightDiv.className = 'show-card-right';
                     const numberDiv = document.createElement('div');
